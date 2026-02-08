@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --primary: 263 60% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 260 10% 96%;
+    --secondary-foreground: 220 20% 15%;
+
+    --muted: 260 10% 96%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 263 60% 31%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 263 60% 31%;
+
+    --radius: 0.5rem;
+
+    /* Luas brand colors */
+    --luas-purple: 263 60% 31%;
+    --luas-green: 152 100% 30%;
+    --luas-red: 356 92% 45%;
+
+    /* Gradients */
+    --gradient-purple: linear-gradient(135deg, hsl(263 60% 31%), hsl(263 60% 25%));
+
+    /* Shadows */
+    --shadow-purple: 0 4px 14px hsl(263 60% 31% / 0.25);
+
+    --sidebar-background: 263 60% 31%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 263 60% 31%;
+    --sidebar-accent: 263 60% 36%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 263 50% 40%;
+    --sidebar-ring: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 220 20% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 220 18% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 220 18% 12%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 263 60% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 95%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 263 60% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 263 60% 50%;
+
+    --luas-purple: 263 60% 50%;
+    --luas-green: 152 100% 40%;
+    --luas-red: 356 92% 50%;
+
+    --sidebar-background: 263 50% 20%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 263 60% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 263 50% 28%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 263 40% 30%;
+    --sidebar-ring: 263 60% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Open Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-purple);
+  }
+
+  .glow-purple {
+    box-shadow: var(--shadow-purple);
+  }
+}

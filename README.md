@@ -13,8 +13,9 @@ This is a learning project that tracks Luas arrivals at the Cabra stop on the Gr
 
 ## Tech Stack
 
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Python with FastAPI
-- **Database**: PostgreSQL (for time-series data)
+- **Database**: PostgreSQL (Amazon RDS)
 - **Scheduling**: APScheduler for background polling
 - **Async**: httpx for non-blocking API calls
 
@@ -58,6 +59,23 @@ uvicorn main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
+
+### Frontend Installation
+
+```bash
+cd frontend
+
+npm install
+
+# Configure API URL (optional - defaults to Railway)
+cp .env.example .env
+nano .env  # Set VITE_API_URL to your backend URL
+
+# Run dev server
+npm run dev
+```
+
+The frontend will be available at `http://localhost:8080`
 
 ## API Endpoints
 
@@ -157,6 +175,18 @@ App Runner is the simplest AWS option for this app — it handles containers, sc
 
 The health check endpoint at `/health` can be used for App Runner's health check configuration.
 
+### AWS Amplify (Frontend)
+
+1. Go to the [Amplify console](https://console.aws.amazon.com/amplify)
+2. Click **Create new app** and connect your GitHub repo
+3. Set the **App root** to `frontend`
+4. Build settings (Amplify should auto-detect Vite):
+   - Build command: `npm run build`
+   - Output directory: `dist`
+5. Under **Environment variables**, add:
+   - `VITE_API_URL` = your App Runner backend URL (e.g. `https://abc123.eu-west-1.awsapprunner.com`)
+6. Deploy
+
 ### Railway
 
 1. Connect your GitHub repo to Railway
@@ -180,11 +210,9 @@ docker run -p 8080:8080 -e DATABASE_URL=postgresql://user:pass@host:5432/dbname 
 
 ## Next Steps / Future Features
 
-- Accuracy calculation (comparing old forecasts to new ones)
-- Frontend dashboard with real-time updates
 - WebSocket support for live updates
 - Predictive analytics
-- Multi-stop support
+- Mobile app via Capacitor
 
 ## Learning Resources
 
