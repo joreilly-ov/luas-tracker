@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+*.md
+pytest.ini
+.pytest_cache/
+htmlcov/
+*.db
