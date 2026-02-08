@@ -18,6 +18,16 @@ This is a learning project that tracks Luas arrivals at the Cabra stop on the Gr
 - **Scheduling**: APScheduler for background polling
 - **Async**: httpx for non-blocking API calls
 
+## Project Structure
+
+```
+luas-tracker/
+├── backend/          # Python FastAPI backend (deployed to AWS App Runner)
+├── frontend/         # Frontend app (deployed to AWS Amplify)
+├── Dockerfile        # Backend container build
+└── README.md
+```
+
 ## Setup
 
 ### Prerequisites
@@ -26,40 +36,24 @@ This is a learning project that tracks Luas arrivals at the Cabra stop on the Gr
 - PostgreSQL (or you can use SQLite for local development)
 - pip
 
-### Installation
+### Backend Installation
 
-1. Clone/create the project directory
 ```bash
-cd luas-tracker
-```
+cd backend
 
-2. Create a virtual environment
-```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
 
-3. Install dependencies
-```bash
 pip install -r requirements.txt
-```
 
-4. Set up database
-```bash
-# Copy the example env file
+# Configure database
 cp .env.example .env
+nano .env  # Set DATABASE_URL
 
-# Edit .env with your database connection
-nano .env
-```
-
-5. Initialize the database
-```bash
+# Initialize database
 python -c "from database import init_db; init_db()"
-```
 
-6. Run the server
-```bash
+# Run server
 uvicorn main:app --reload
 ```
 

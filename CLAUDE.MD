@@ -26,17 +26,22 @@ A full-stack learning project that tracks real-time arrivals for Dublin's Luas t
 
 ```
 luas-tracker/
-├── main.py              # FastAPI app entry point, CORS, lifespan management
-├── database.py          # SQLAlchemy models (LuasSnapshot, LuasAccuracy), engine setup
-├── routes.py            # API endpoints (arrivals, accuracy, debug endpoints)
-├── luas_client.py       # Luas API client, XML parsing
-├── scheduler.py         # Background jobs (polling, accuracy calculation)
-├── requirements.txt     # Python dependencies
-├── .env.example         # Environment variable template
-├── test_luas_tracker.py # Test suite
-├── pytest.ini           # pytest configuration
-├── TESTING.md           # Testing documentation
-└── README.md            # User-facing documentation
+├── backend/
+│   ├── main.py              # FastAPI app entry point, CORS, lifespan management
+│   ├── database.py          # SQLAlchemy models (LuasSnapshot, LuasAccuracy), engine setup
+│   ├── routes.py            # API endpoints (arrivals, accuracy, debug endpoints)
+│   ├── luas_client.py       # Luas API client, XML parsing
+│   ├── scheduler.py         # Background jobs (polling, accuracy calculation)
+│   ├── requirements.txt     # Python dependencies
+│   ├── .env.example         # Environment variable template
+│   ├── test_luas_tracker.py # Test suite
+│   ├── pytest.ini           # pytest configuration
+│   └── TESTING.md           # Testing documentation
+├── frontend/                # Frontend app (to be added from Lovable)
+├── Dockerfile               # Backend container build (used by App Runner)
+├── .dockerignore            # Docker build exclusions
+├── CLAUDE.MD                # Project guide for AI assistance
+└── README.md                # User-facing documentation
 ```
 
 ## Architecture & Data Flow
@@ -248,6 +253,7 @@ except SpecificError as e:
 
 ```bash
 # Setup
+cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -365,12 +371,13 @@ curl http://localhost:8000/debug/data-collection
 
 | File | Purpose |
 |------|---------|
-| `main.py` | FastAPI app initialization, CORS, scheduler lifecycle |
-| `database.py` | SQLAlchemy models and database connection setup |
-| `routes.py` | All HTTP endpoints (arrivals, accuracy, debug) |
-| `luas_client.py` | External API integration and XML parsing |
-| `scheduler.py` | Background jobs (polling and accuracy calculation) |
-| `test_luas_tracker.py` | Test suite covering all major functionality |
+| `backend/main.py` | FastAPI app initialization, CORS, scheduler lifecycle |
+| `backend/database.py` | SQLAlchemy models and database connection setup |
+| `backend/routes.py` | All HTTP endpoints (arrivals, accuracy, debug) |
+| `backend/luas_client.py` | External API integration and XML parsing |
+| `backend/scheduler.py` | Background jobs (polling and accuracy calculation) |
+| `backend/test_luas_tracker.py` | Test suite covering all major functionality |
+| `Dockerfile` | Container build for backend (used by AWS App Runner) |
 
 ## Learning Notes
 
