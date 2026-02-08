@@ -143,11 +143,32 @@ Stores calculated accuracy metrics. Useful for:
 
 ## Deployment
 
-### Railway (Recommended)
+### AWS App Runner (Recommended)
+
+App Runner is the simplest AWS option for this app — it handles containers, scaling, and HTTPS automatically.
+
+1. **Create a PostgreSQL database** (e.g. Amazon RDS, or a free tier on [Neon](https://neon.tech) / [Supabase](https://supabase.com))
+2. Go to the [App Runner console](https://console.aws.amazon.com/apprunner)
+3. Click **Create service**
+4. Choose **Source code repository** and connect your GitHub repo
+5. Under **Deployment settings**, select **Automatic** (deploys on every push)
+6. Under **Configure build**:
+   - Runtime: **Docker**
+   - The Dockerfile in this repo will be used automatically
+7. Under **Service settings**:
+   - Port: `8080`
+8. Under **Environment variables**, add:
+   - `DATABASE_URL` = your PostgreSQL connection string (e.g. `postgresql://user:pass@host:5432/dbname`)
+9. Click **Create & deploy**
+
+The health check endpoint at `/health` can be used for App Runner's health check configuration.
+
+### Railway
 
 1. Connect your GitHub repo to Railway
-2. Set `DATABASE_URL` environment variable
-3. Deploy
+2. Add a PostgreSQL database service
+3. Set `DATABASE_URL` environment variable (Railway does this automatically when you link the database)
+4. Deploy
 
 ### Render
 
@@ -155,6 +176,13 @@ Stores calculated accuracy metrics. Useful for:
 2. Point to your repo
 3. Set environment variables
 4. Deploy
+
+### Docker (any platform)
+
+```bash
+docker build -t luas-tracker .
+docker run -p 8080:8080 -e DATABASE_URL=postgresql://user:pass@host:5432/dbname luas-tracker
+```
 
 ## Next Steps / Future Features
 
