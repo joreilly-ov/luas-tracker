@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import logging
 
@@ -208,18 +208,21 @@ async def get_cabra_arrivals(db: Session = Depends(get_db), limit: int = 3):
 
 
 @router.get("/accuracy/summary")
-async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "cab", hours: int = 24):
+async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "cab", hours: Optional[int] = None):
     """
     Get forecast accuracy metrics for a specific stop.
     Parameters:
     - stop_code: Stop code (e.g., bro, cab, sts, tal, jer, con, etc. - see /stops for full list)
-    - hours: Number of hours to look back (default 24)
+    - hours: Number of hours to look back (omit or leave blank for all-time data)
     """
     logger.info(f"GET /accuracy/summary called with stop_code={stop_code}, hours={hours}")
 
     try:
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
-        logger.info(f"Cutoff time: {cutoff_time.isoformat()}")
+        cutoff_time = datetime.utcnow() - timedelta(hours=hours) if hours is not None else None
+        if cutoff_time is not None:
+            logger.info(f"Cutoff time: {cutoff_time.isoformat()}")
+        else:
+            logger.info("No time cutoff - returning all-time data")
 
         # First, check total records for debugging
         total_records = db.query(func.count(LuasAccuracy.id)).scalar()
@@ -231,15 +234,16 @@ async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "
         ).scalar()
         logger.info(f"Total accuracy records for stop {stop_code}: {stop_records}")
 
-        # Check records for this stop within time window
-        recent_records = db.query(func.count(LuasAccuracy.id)).filter(
-            LuasAccuracy.stop_code == stop_code,
-            LuasAccuracy.calculated_at >= cutoff_time
-        ).scalar()
-        logger.info(f"Accuracy records for stop {stop_code} in last {hours}h: {recent_records}")
+        if cutoff_time is not None:
+            # Check records for this stop within time window
+            recent_records = db.query(func.count(LuasAccuracy.id)).filter(
+                LuasAccuracy.stop_code == stop_code,
+                LuasAccuracy.calculated_at >= cutoff_time
+            ).scalar()
+            logger.info(f"Accuracy records for stop {stop_code} in last {hours}h: {recent_records}")
 
         # Query accuracy data grouped by destination/direction for the specified stop
-        accuracy_data = db.query(
+        base_query = db.query(
             LuasAccuracy.destination,
             LuasAccuracy.direction,
             func.count(LuasAccuracy.id).label("count"),
@@ -247,9 +251,11 @@ async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "
             func.min(LuasAccuracy.accuracy_delta).label("min_delta"),
             func.max(LuasAccuracy.accuracy_delta).label("max_delta")
         ).filter(
-            LuasAccuracy.stop_code == stop_code,
-            LuasAccuracy.calculated_at >= cutoff_time
-        ).group_by(
+            LuasAccuracy.stop_code == stop_code
+        )
+        if cutoff_time is not None:
+            base_query = base_query.filter(LuasAccuracy.calculated_at >= cutoff_time)
+        accuracy_data = base_query.group_by(
             LuasAccuracy.destination,
             LuasAccuracy.direction
         ).all()
@@ -268,10 +274,11 @@ async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "
                 for s in sample
             ]
 
+            period_label = f"the last {hours} hours" if hours is not None else "all time"
             return {
                 "stop_code": stop_code,
                 "period_hours": hours,
-                "message": f"No accuracy data found for stop '{stop_code}' in the last {hours} hours",
+                "message": f"No accuracy data found for stop '{stop_code}' for {period_label}",
                 "debug_info": {
                     "total_records_in_db": total_records,
                     "records_for_this_stop": stop_records,
