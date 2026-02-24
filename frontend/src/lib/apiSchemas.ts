@@ -49,7 +49,7 @@ export type DestinationAccuracy = z.infer<typeof DestinationAccuracySchema>;
 
 export const MetricsResponseSchema = z.object({
   stop_code: z.string(),
-  period_hours: z.number(),
+  period_hours: z.number().nullable(),
   message: z.string().optional(),
   data: z.array(DestinationAccuracySchema),
   debug_info: z.unknown().optional(),
