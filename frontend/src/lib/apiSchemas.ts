@@ -47,12 +47,18 @@ const DestinationAccuracySchema = z.object({
 
 export type DestinationAccuracy = z.infer<typeof DestinationAccuracySchema>;
 
+const MetricsDebugInfoSchema = z.object({
+  total_records_in_db: z.number(),
+  records_for_this_stop: z.number(),
+  sample_records: z.array(z.unknown()).optional(),
+});
+
 export const MetricsResponseSchema = z.object({
   stop_code: z.string(),
   period_hours: z.number().nullable(),
   message: z.string().optional(),
   data: z.array(DestinationAccuracySchema),
-  debug_info: z.unknown().optional(),
+  debug_info: MetricsDebugInfoSchema.optional(),
 });
 
 export type MetricsData = z.infer<typeof MetricsResponseSchema>;
