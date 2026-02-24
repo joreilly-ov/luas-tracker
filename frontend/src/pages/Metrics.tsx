@@ -582,6 +582,12 @@ export default function Metrics() {
                 <p className="text-muted-foreground">
                   {metrics.message || "Accuracy data will appear once predictions are tracked and compared to actual arrivals."}
                 </p>
+                {metrics.debug_info && (
+                  <div className="mt-4 inline-flex flex-col gap-1 text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-3">
+                    <span>Total accuracy records in database: <span className="font-mono font-semibold text-foreground">{metrics.debug_info.total_records_in_db.toLocaleString()}</span></span>
+                    <span>Records for this stop: <span className="font-mono font-semibold text-foreground">{metrics.debug_info.records_for_this_stop.toLocaleString()}</span></span>
+                  </div>
+                )}
               </div>
             )}
 
