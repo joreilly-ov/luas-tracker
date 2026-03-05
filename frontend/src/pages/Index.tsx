@@ -30,6 +30,22 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* DART — beta */}
+            <Link to="/dart">
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                >
+                  <Train className="h-4 w-4" />
+                  <span className="hidden sm:inline">DART</span>
+                </Button>
+                <span className="absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-wider bg-amber-400 text-amber-900 px-1 py-0.5 rounded leading-none pointer-events-none">
+                  beta
+                </span>
+              </div>
+            </Link>
             <Dialog open={mapOpen} onOpenChange={setMapOpen}>
               <DialogTrigger asChild>
                 <Button 

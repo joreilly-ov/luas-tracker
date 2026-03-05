@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import OperatingHours from "./pages/OperatingHours";
 import Metrics from "./pages/Metrics";
 import Tetris from "./pages/Tetris";
+import Dart from "./pages/Dart";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/hours" element={<OperatingHours />} />
           <Route path="/metrics" element={<Metrics />} />
           <Route path="/tetris" element={<Tetris />} />
+          <Route path="/dart" element={<Dart />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
