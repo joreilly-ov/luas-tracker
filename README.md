@@ -1,21 +1,23 @@
-# Luas Real-Time Tracker
+# Luas & DART Real-Time Tracker
 
-A real-time public transport tracking system for Dublin's Luas tram network. Built to learn full-stack development with real API integration, data pipelines, and time-series analytics.
+A real-time public transport tracking system for Dublin's Luas tram and DART rail networks. Built to learn full-stack development with real API integration, data pipelines, and time-series analytics.
 
 ## Project Overview
 
-This is a learning project that tracks Luas arrivals at the Cabra stop on the Green Line. It demonstrates:
+This is a learning project that tracks Luas and DART arrivals across Dublin. It demonstrates:
 
-- **API Integration**: Consuming real-time data from Dublin's Luas Automatic Vehicle Location System
+- **API Integration**: Consuming real-time data from the Luas AVL system and the Irish Rail real-time API
 - **Data Pipeline**: Scheduled polling, data transformation, and storage
 - **Time-Series Analytics**: Tracking forecast accuracy over time
 - **Full-Stack Architecture**: Backend API, database, frontend integration
+- **Microservices**: Separate DART service that runs independently of the Luas backend
 
 ## Tech Stack
 
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Python with FastAPI
-- **Database**: PostgreSQL (Amazon RDS)
+- **DART Service**: Standalone Python FastAPI microservice
+- **Database**: PostgreSQL (Amazon RDS) — separate databases for Luas and DART
 - **Scheduling**: APScheduler for background polling
 - **Async**: httpx for non-blocking API calls
 
@@ -24,6 +26,7 @@ This is a learning project that tracks Luas arrivals at the Cabra stop on the Gr
 ```
 luas-tracker/
 ├── backend/          # Python FastAPI backend (deployed to AWS App Runner)
+├── dart-service/     # Standalone DART microservice (independent of Luas backend)
 ├── frontend/         # Frontend app (deployed to AWS Amplify)
 ├── Dockerfile        # Backend container build
 └── README.md
@@ -60,6 +63,28 @@ uvicorn main:app --reload
 
 The API will be available at `http://localhost:8000`
 
+### DART Service Installation
+
+The DART service is a separate microservice with its own database.
+
+```bash
+cd dart-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+# Configure database (optional — defaults to SQLite for local dev)
+export DART_DATABASE_URL=postgresql://user:pass@host:5432/dart_db
+# or leave unset to use SQLite: dart_tracker.db
+
+# Run server
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+The DART API will be available at `http://localhost:8001`
+
 ### Frontend Installation
 
 ```bash
@@ -79,72 +104,112 @@ The frontend will be available at `http://localhost:8080`
 
 ## API Endpoints
 
-### Get Next Arrivals
+### Luas Backend
+
+#### Get Next Arrivals
 ```
-GET /arrivals/cabra?limit=3
+GET /arrivals/{stop_code}?limit=3
 ```
-Returns the next 3 upcoming trams for Cabra stop.
+Returns the next N upcoming trams for any Luas stop (e.g. `/arrivals/cab?limit=5`).
+
+#### Get All Stops
+```
+GET /stops
+```
+Returns all 67 Luas stops organised by line.
+
+#### Get Forecast Accuracy
+```
+GET /accuracy/summary?stop_code=cab&hours=24
+```
+Forecast accuracy metrics for the last N hours.
+
+#### Health Check
+```
+GET /health
+```
+
+### DART Service
+
+#### Get DART Arrivals
+```
+GET /arrivals/{station_code}?limit=5
+```
+Returns the next DART arrivals at a station. Only DART services are returned — Intercity and Commuter trains are filtered out.
+
+**Example:** `GET /arrivals/BROCK?limit=5`
 
 **Example Response:**
 ```json
 {
-  "stop_code": "cab",
-  "last_updated": "2024-01-15T14:30:45.123456",
+  "station_code": "BROCK",
+  "station_name": "Blackrock",
+  "last_updated": "2024-01-15T14:30:45",
   "next_arrivals": [
     {
-      "destination": "The Point",
-      "direction": "Inbound",
-      "due_minutes": 3,
-      "due_time": "2024-01-15T14:33:45.123456"
-    },
-    {
-      "destination": "Tallaght",
-      "direction": "Outbound",
-      "due_minutes": 7,
-      "due_time": "2024-01-15T14:37:45.123456"
+      "train_code": "E123",
+      "origin": "Greystones",
+      "destination": "Malahide",
+      "direction": "Northbound",
+      "due_in_minutes": 3,
+      "minutes_late": 0,
+      "expected_arrival": "14:33",
+      "status": "En Route",
+      "last_location": "Seapoint"
     }
   ]
 }
 ```
 
-### Get Forecast Accuracy
+#### Get All DART Stations
 ```
-GET /accuracy/summary?hours=24
+GET /stations
 ```
-Get forecast accuracy metrics for the last N hours (default 24).
+Returns all DART stations grouped by zone (south / city / north).
 
-### Health Check
+#### DART Forecast Accuracy
+```
+GET /accuracy/summary?station_code=BROCK&hours=24
+```
+
+#### DART Health Check
 ```
 GET /health
 ```
-Simple health check endpoint.
 
-### Stats
-```
-GET /stats
-```
-Get general system statistics.
+The Luas backend also exposes a proxy to the DART service at `/dart/arrivals/{station_code}` and `/dart/stations`, so the frontend only needs to talk to one backend.
 
 ## How It Works
 
-1. **Polling Loop**: Every 30 seconds, the backend calls the Luas API
+### Luas
+1. **Polling Loop**: Every 30 seconds, the backend polls 12 Luas stops across both lines
 2. **Data Storage**: Raw forecast snapshots are stored in PostgreSQL
-3. **API Serving**: The frontend calls `/arrivals/cabra` to get the latest forecasts
-4. **Accuracy Tracking**: As new forecasts come in, we compare them to old ones to measure accuracy
+3. **API Serving**: The frontend calls `/arrivals/{stop_code}` to get the latest forecasts
+4. **Accuracy Tracking**: Forecast transitions (e.g. 3→2→1→0 minutes) are used to measure accuracy
+
+### DART
+1. **Polling Loop**: Every 60 seconds, the DART service polls 20 stations via the Irish Rail real-time API
+2. **Filtering**: Non-DART services (Intercity, Commuter) are discarded at parse time
+3. **Train Tracking**: Trains are tracked by `train_code` + arrival bucket across polls, enabling accuracy measurement
+4. **Proxy**: The Luas backend proxies DART requests directly to the Irish Rail API for live data
 
 ## Database Schema
 
-### luas_snapshots
-Stores raw API responses at each poll interval. Useful for:
-- Serving current forecasts
-- Calculating accuracy over time
-- Trending analysis
+### Luas
 
-### luas_accuracy
-Stores calculated accuracy metrics. Useful for:
-- Understanding forecast quality
-- Identifying problem routes/times
-- Time-series analysis
+#### luas_snapshots
+Stores raw API responses at each poll interval. Each record = one forecast at one point in time.
+
+#### luas_accuracy
+Stores calculated accuracy metrics from forecast progression comparisons.
+
+### DART
+
+#### dart_snapshots
+Stores raw Irish Rail API responses filtered to DART trains only. Fields include `train_code`, `origin`, `destination`, `direction`, `due_in_minutes`, `minutes_late`, `expected_arrival`, `status`, `last_location`.
+
+#### dart_accuracy
+Stores accuracy deltas calculated by tracking the same train across successive polls. Uses `train_code` + arrival time bucket as the grouping key (more reliable than Luas since Irish Rail provides actual train codes).
 
 ## Development Notes
 
@@ -213,6 +278,7 @@ docker run -p 8080:8080 -e DATABASE_URL=postgresql://user:pass@host:5432/dbname 
 - WebSocket support for live updates
 - Predictive analytics
 - Mobile app via Capacitor
+- Irish Rail Commuter/Intercity tracking
 
 ## Learning Resources
 
@@ -220,3 +286,4 @@ docker run -p 8080:8080 -e DATABASE_URL=postgresql://user:pass@host:5432/dbname 
 - [SQLAlchemy ORM](https://docs.sqlalchemy.org/)
 - [APScheduler](https://apscheduler.readthedocs.io/)
 - [Dublin Open Data - Luas API](https://data.gov.ie)
+- [Irish Rail Real-Time API](https://api.irishrail.ie/realtime/)
