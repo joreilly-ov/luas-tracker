@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const DART_API_URL = import.meta.env.VITE_DART_API_URL || "http://localhost:8001";
+const DART_API_URL = import.meta.env.VITE_API_URL || "https://luas-tracker-production.up.railway.app";
 
 // The two stations the user cares about most
 const STATIONS_TO_SHOW = [
@@ -162,7 +162,7 @@ function StationCard({ stationCode, stationName }: { stationCode: string; statio
               <h3 className="font-semibold text-destructive text-sm">Unable to load</h3>
               <p className="text-xs text-destructive/80 mt-1">{error}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Is the dart-service running on {DART_API_URL}?
+                API: {DART_API_URL}
               </p>
               <Button variant="destructive" size="sm" onClick={refresh} className="mt-2 h-7 text-xs">
                 Retry
@@ -257,11 +257,9 @@ const Dart = () => {
           <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
             <span className="font-semibold">Beta — </span>
-            DART data comes from the{" "}
-            <span className="font-medium">Irish Rail real-time API</span> via a separate microservice
-            (dart-service). Make sure it's running locally on port 8001, or set{" "}
-            <code className="text-xs bg-amber-100 px-1 rounded">VITE_DART_API_URL</code> in your
-            frontend .env.
+            Live DART data is fetched directly from the{" "}
+            <span className="font-medium">Irish Rail real-time API</span> via the Luas backend proxy.
+            Station tracking and accuracy logging will move to a dedicated dart-service once out of beta.
           </p>
         </div>
 

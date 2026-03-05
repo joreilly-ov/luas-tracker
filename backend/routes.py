@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
 import logging
+import httpx
+import xml.etree.ElementTree as ET
 
 from database import get_db, LuasSnapshot, LuasAccuracy
 
@@ -757,3 +759,125 @@ async def get_accuracy_metrics(db: Session = Depends(get_db), stop_code: str = "
     except Exception as e:
         logger.error(f"Error getting accuracy metrics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# DART proxy — passes through to the Irish Rail real-time API and returns JSON
+# No database or scheduler involvement; this is a read-only live proxy.
+# ---------------------------------------------------------------------------
+
+_IRISH_RAIL_URL = "https://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML"
+_IRISHRAIL_NS = "http://api.irishrail.ie/realtime/"
+
+DART_STATIONS = {
+    "GRYST":  "Greystones",
+    "SNKLL":  "Shankill",
+    "KLNY":   "Killiney",
+    "DLKEY":  "Dalkey",
+    "SDCVE":  "Sandycove & Glasthule",
+    "GLNGY":  "Glenageary",
+    "DLGRE":  "Dún Laoghaire",
+    "SLTH":   "Salthill & Monkstown",
+    "SEAPT":  "Seapoint",
+    "BROCK":  "Blackrock",
+    "BTSTN":  "Booterstown",
+    "SYDPRD": "Sydney Parade",
+    "SDMNT":  "Sandymount",
+    "LNDN":   "Lansdowne Road",
+    "GCDK":   "Grand Canal Dock",
+    "PERSE":  "Pearse",
+    "TARA":   "Tara Street",
+    "CNLLY":  "Connolly",
+    "CNTRF":  "Clontarf Road",
+    "KILBK":  "Kilbarrack",
+    "RAHNY":  "Raheny",
+    "HRMST":  "Harmonstown",
+    "BYSDE":  "Bayside",
+    "HWTHJ":  "Howth Junction & Donaghmede",
+    "SUTT":   "Sutton",
+    "HWTH":   "Howth",
+    "PMRCK":  "Portmarnock",
+    "MHIDE":  "Malahide",
+}
+
+
+def _ir_tag(name: str) -> str:
+    return f"{{{_IRISHRAIL_NS}}}{name}"
+
+
+def _ir_text(el, tag: str, default: str = "") -> str:
+    child = el.find(_ir_tag(tag))
+    return child.text.strip() if child is not None and child.text else default
+
+
+def _parse_irish_rail_xml(xml_content: str, station_code: str) -> list:
+    arrivals = []
+    try:
+        root = ET.fromstring(xml_content)
+        for train in root.findall(_ir_tag("objStationData")):
+            if _ir_text(train, "Traintype").upper() != "DART":
+                continue
+            try:
+                arrivals.append({
+                    "train_code":       _ir_text(train, "Traincode"),
+                    "origin":           _ir_text(train, "Origin"),
+                    "destination":      _ir_text(train, "Destination"),
+                    "direction":        _ir_text(train, "Direction"),
+                    "due_in_minutes":   int(_ir_text(train, "Duein", "0")),
+                    "minutes_late":     int(_ir_text(train, "Late", "0")),
+                    "expected_arrival": _ir_text(train, "Exparrival"),
+                    "status":           _ir_text(train, "Status"),
+                    "last_location":    _ir_text(train, "Lastlocation"),
+                })
+            except (ValueError, TypeError):
+                continue
+    except ET.ParseError as e:
+        logger.error(f"DART XML parse error for {station_code}: {e}")
+        raise HTTPException(status_code=502, detail="Invalid XML from Irish Rail API")
+    return arrivals
+
+
+@router.get("/dart/arrivals/{station_code}")
+async def dart_arrivals(station_code: str, limit: int = 6):
+    """
+    Live DART arrivals proxy — fetches directly from the Irish Rail real-time API
+    and returns only DART services (filters out Intercity / Commuter).
+    No database is used; this is a pure passthrough.
+    """
+    station_code = station_code.upper()
+    if station_code not in DART_STATIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown DART station: {station_code}"
+        )
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            response = await client.get(
+                _IRISH_RAIL_URL,
+                params={"StationCode": station_code}
+            )
+            response.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.error(f"Irish Rail API error for {station_code}: {e}")
+        raise HTTPException(status_code=502, detail=f"Irish Rail API unavailable: {e}")
+
+    arrivals = _parse_irish_rail_xml(response.text, station_code)
+    arrivals.sort(key=lambda a: a["due_in_minutes"])
+
+    return {
+        "station_code": station_code,
+        "station_name": DART_STATIONS[station_code],
+        "last_updated": datetime.utcnow().isoformat(),
+        "next_arrivals": arrivals[:limit],
+    }
+
+
+@router.get("/dart/stations")
+async def dart_stations():
+    """Return the list of all DART stations."""
+    return {
+        "stations": [
+            {"code": code, "name": name}
+            for code, name in DART_STATIONS.items()
+        ]
+    }
