@@ -42,7 +42,7 @@ function useStationArrivals(stationCode: string) {
     try {
       setIsRefreshing(true);
       setError(null);
-      const res = await fetch(`${DART_API_URL}/arrivals/${stationCode}?limit=6`);
+      const res = await fetch(`${DART_API_URL}/dart/arrivals/${stationCode}?limit=6`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
       setData(json);
