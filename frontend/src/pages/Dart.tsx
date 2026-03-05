@@ -29,6 +29,8 @@ interface StationData {
   station_name: string;
   last_updated: string;
   next_arrivals: DartArrival[];
+  total_dart_trains: number;
+  has_any_service: boolean;
 }
 
 function useStationArrivals(stationCode: string) {
@@ -42,7 +44,7 @@ function useStationArrivals(stationCode: string) {
     try {
       setIsRefreshing(true);
       setError(null);
-      const res = await fetch(`${DART_API_URL}/dart/arrivals/${stationCode}?limit=6`);
+      const res = await fetch(`${DART_API_URL}/dart/arrivals/${stationCode}?limit=20`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -110,11 +112,29 @@ function ArrivalRow({ arrival }: { arrival: DartArrival }) {
   );
 }
 
+// Returns true if the current local time is within rough DART operating hours (06:00–23:30).
+function isDartOperatingHours(): boolean {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return mins >= 360 && mins <= 1410; // 06:00 – 23:30
+}
+
+// Average delay across all arrivals; returns null if no data.
+function avgDelay(arrivals: DartArrival[]): number | null {
+  if (arrivals.length === 0) return null;
+  return arrivals.reduce((s, a) => s + a.minutes_late, 0) / arrivals.length;
+}
+
 function StationCard({ stationCode, stationName }: { stationCode: string; stationName: string }) {
   const { data, loading, error, isRefreshing, lastFetched, refresh } = useStationArrivals(stationCode);
 
   const northbound = data?.next_arrivals.filter(a => a.direction === "Northbound") ?? [];
   const southbound = data?.next_arrivals.filter(a => a.direction === "Southbound") ?? [];
+
+  const noTrains = !loading && !error && data && data.next_arrivals.length === 0;
+  const possibleDisruption = noTrains && !data!.has_any_service && isDartOperatingHours();
+  const delay = data ? avgDelay(data.next_arrivals) : null;
+  const significantDelay = delay !== null && delay >= 5;
 
   const formatTime = (d: Date) =>
     d.toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -148,6 +168,46 @@ function StationCard({ stationCode, stationName }: { stationCode: string; statio
           <p className="text-xs text-muted-foreground mb-3">Updated: {formatTime(lastFetched)}</p>
         )}
 
+        {/* Disruption warning — no trains at all from Irish Rail during operating hours */}
+        {possibleDisruption && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 flex gap-2 mb-3">
+            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-red-700">Possible service disruption</p>
+              <p className="text-xs text-red-600 mt-0.5">
+                No trains detected from Irish Rail.{" "}
+                <a
+                  href="https://www.irishrail.ie/travel-information/service-updates"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  Check service updates →
+                </a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Significant delay warning */}
+        {significantDelay && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 flex gap-2 mb-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">
+              <span className="font-semibold">Delays on this line</span> — avg{" "}
+              {Math.round(delay!)}m late.{" "}
+              <a
+                href="https://www.irishrail.ie/travel-information/service-updates"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-medium"
+              >
+                Service updates →
+              </a>
+            </p>
+          </div>
+        )}
+
         {loading && (
           <div className="flex flex-col items-center justify-center py-8 gap-3">
             <Loader className="h-6 w-6 animate-spin text-teal-600" />
@@ -171,7 +231,7 @@ function StationCard({ stationCode, stationName }: { stationCode: string; statio
           </div>
         )}
 
-        {!loading && !error && data && (
+        {!loading && !error && data && data.next_arrivals.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Southbound */}
             <div>
@@ -203,10 +263,11 @@ function StationCard({ stationCode, stationName }: { stationCode: string; statio
           </div>
         )}
 
-        {!loading && !error && data?.next_arrivals.length === 0 && (
+        {!loading && !error && data && data.next_arrivals.length === 0 && !possibleDisruption && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Train className="h-6 w-6 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No DART trains scheduled</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Outside operating hours or end of service</p>
           </div>
         )}
       </div>

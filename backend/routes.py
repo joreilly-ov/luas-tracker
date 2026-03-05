@@ -810,11 +810,19 @@ def _ir_text(el, tag: str, default: str = "") -> str:
     return child.text.strip() if child is not None and child.text else default
 
 
-def _parse_irish_rail_xml(xml_content: str, station_code: str) -> list:
+def _parse_irish_rail_xml(xml_content: str, station_code: str) -> tuple[list, bool]:
+    """Returns (dart_arrivals, has_any_service).
+
+    has_any_service is True if the Irish Rail API returned *any* train records
+    (DART or otherwise) — useful for detecting service suspensions vs. simply
+    no upcoming trains within the query window.
+    """
     arrivals = []
+    total_trains = 0
     try:
         root = ET.fromstring(xml_content)
         for train in root.findall(_ir_tag("objStationData")):
+            total_trains += 1
             if _ir_text(train, "Traintype").upper() != "DART":
                 continue
             try:
@@ -834,7 +842,7 @@ def _parse_irish_rail_xml(xml_content: str, station_code: str) -> list:
     except ET.ParseError as e:
         logger.error(f"DART XML parse error for {station_code}: {e}")
         raise HTTPException(status_code=502, detail="Invalid XML from Irish Rail API")
-    return arrivals
+    return arrivals, total_trains > 0
 
 
 @router.get("/dart/arrivals/{station_code}")
@@ -861,7 +869,7 @@ async def dart_arrivals(station_code: str, limit: int = 6):
         logger.error(f"Irish Rail API error for {station_code}: {e}")
         raise HTTPException(status_code=502, detail=f"Irish Rail API unavailable: {e}")
 
-    arrivals = _parse_irish_rail_xml(response.text, station_code)
+    arrivals, has_any_service = _parse_irish_rail_xml(response.text, station_code)
     arrivals.sort(key=lambda a: a["due_in_minutes"])
 
     return {
@@ -869,6 +877,8 @@ async def dart_arrivals(station_code: str, limit: int = 6):
         "station_name": DART_STATIONS[station_code],
         "last_updated": datetime.utcnow().isoformat(),
         "next_arrivals": arrivals[:limit],
+        "total_dart_trains": len(arrivals),
+        "has_any_service": has_any_service,
     }
 
 
