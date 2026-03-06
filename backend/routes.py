@@ -862,7 +862,7 @@ async def dart_arrivals(station_code: str, limit: int = 6):
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(
                 _IRISH_RAIL_URL,
-                params={"StationCode": station_code}
+                params={"StationCode": station_code, "NumMins": 90}
             )
             response.raise_for_status()
     except httpx.HTTPError as e:
