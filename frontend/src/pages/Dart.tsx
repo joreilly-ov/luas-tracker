@@ -318,9 +318,8 @@ const Dart = () => {
           <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
             <span className="font-semibold">Beta — </span>
-            Live DART data is fetched directly from the{" "}
-            <span className="font-medium">Irish Rail real-time API</span> via the Luas backend proxy.
-            Station tracking and accuracy logging will move to a dedicated dart-service once out of beta.
+            Live DART data is sourced from the{" "}
+            <span className="font-medium">Irish Rail real-time API</span>. Arrivals are polled every 60 seconds.
           </p>
         </div>
 
