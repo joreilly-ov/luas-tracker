@@ -73,6 +73,8 @@ class StationArrivalsResponse(BaseModel):
     station_name: str
     last_updated: str
     next_arrivals: List[ArrivalResponse]
+    total_dart_trains: int
+    has_any_service: bool
 
 
 @router.get("/stations")
@@ -108,12 +110,21 @@ async def get_arrivals(station_code: str, db: Session = Depends(get_db), limit: 
             DartSnapshot.station_code == station_code
         ).scalar()
 
+        # Check if any station has recent data — proves Irish Rail API is responding.
+        # Used by the frontend to distinguish "no trains here" from a full service outage.
+        recent_cutoff = datetime.utcnow() - timedelta(minutes=3)
+        has_any_service = db.query(DartSnapshot.id).filter(
+            DartSnapshot.recorded_at >= recent_cutoff
+        ).limit(1).scalar() is not None
+
         if not latest_recorded_at:
             return StationArrivalsResponse(
                 station_code=station_code,
                 station_name=DART_STATIONS[station_code]["name"],
                 last_updated=datetime.utcnow().isoformat(),
-                next_arrivals=[]
+                next_arrivals=[],
+                total_dart_trains=0,
+                has_any_service=has_any_service,
             )
 
         snapshots = db.query(DartSnapshot).filter(
@@ -141,7 +152,9 @@ async def get_arrivals(station_code: str, db: Session = Depends(get_db), limit: 
             station_code=station_code,
             station_name=DART_STATIONS[station_code]["name"],
             last_updated=latest_recorded_at.isoformat(),
-            next_arrivals=arrivals
+            next_arrivals=arrivals,
+            total_dart_trains=len(arrivals),
+            has_any_service=has_any_service,
         )
 
     except HTTPException:
