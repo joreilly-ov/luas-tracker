@@ -29,7 +29,7 @@ luas-tracker/
 ├── dart-service/         # Standalone DART microservice
 │   ├── Dockerfile        # Container build for Fly.io
 │   └── fly.toml          # Fly.io config for DART service
-├── frontend/             # React frontend (Cloudflare Pages)
+├── frontend/             # React frontend (built into backend image, served by FastAPI)
 ├── Dockerfile            # Container build for Luas backend (Fly.io)
 ├── fly.toml              # Fly.io config for Luas backend
 └── README.md
@@ -225,10 +225,11 @@ Stores accuracy deltas calculated by tracking the same train across successive p
 
 | Component | Service | Cost |
 |-----------|---------|------|
-| Luas backend | Fly.io (shared VM, Dublin region) | Free |
+| Luas backend + frontend | Fly.io (shared VM, Dublin region) | Free |
 | DART service | Fly.io (shared VM, Dublin region) | Free |
-| Frontend | Cloudflare Pages | Free |
 | Database | Neon (serverless Postgres) | Free |
+
+The React frontend is built into the backend Docker image (multi-stage build) and served as static files by FastAPI. No separate frontend hosting is needed.
 
 ### 1. Database — Neon
 
@@ -249,13 +250,15 @@ Install the CLI: `brew install flyctl` (or see [fly.io/docs/hands-on/install-fly
 fly auth signup   # or fly auth login
 ```
 
-**Deploy the Luas backend** (from repo root):
+**Deploy the Luas backend + frontend** (from repo root):
 
 ```bash
 fly apps create luas-tracker          # pick any unique name
 fly secrets set DATABASE_URL="postgresql://..." -a luas-tracker
 fly deploy
 ```
+
+The multi-stage Dockerfile builds the React frontend and embeds it into the Python image. The app is then accessible at `https://<your-app>.fly.dev`.
 
 **Deploy the DART service** (from dart-service/ directory):
 
@@ -269,18 +272,6 @@ fly deploy
 Update the `app` name in each `fly.toml` to match what you created above.
 
 Both services run in Dublin (`dub` region) and are kept always-on (`auto_stop_machines = false`) so the APScheduler background jobs keep running.
-
-### 3. Frontend — Cloudflare Pages
-
-1. Push your repo to GitHub
-2. Go to [Cloudflare Pages](https://pages.cloudflare.com) → **Create a project** → connect your GitHub repo
-3. Configure the build:
-   - **Root directory**: `frontend`
-   - **Build command**: `npm run build`
-   - **Output directory**: `dist`
-4. Under **Environment variables**, add:
-   - `VITE_API_URL` = your Fly.io Luas backend URL (e.g. `https://luas-tracker.fly.dev`)
-5. Deploy
 
 ## Next Steps / Future Features
 
