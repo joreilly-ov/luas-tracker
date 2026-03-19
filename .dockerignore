@@ -10,5 +10,4 @@ pytest.ini
 htmlcov/
 *.db
 dart-service/
-frontend/
 fly.toml
