@@ -25,10 +25,11 @@ This is a learning project that tracks Luas and DART arrivals across Dublin. It 
 
 ```
 luas-tracker/
-├── backend/          # Python FastAPI backend (deployed to AWS App Runner)
-├── dart-service/     # Standalone DART microservice (independent of Luas backend)
-├── frontend/         # Frontend app (deployed to AWS Amplify)
-├── Dockerfile        # Backend container build
+├── backend/              # Python FastAPI backend (deployed to AWS App Runner)
+├── dart-service/         # Standalone DART microservice (deployed to AWS App Runner)
+├── frontend/             # Frontend app (deployed to AWS Amplify)
+├── apprunner.yaml        # App Runner config for Luas backend
+├── apprunner-dart.yaml   # App Runner config for DART service
 └── README.md
 ```
 
@@ -92,7 +93,7 @@ cd frontend
 
 npm install
 
-# Configure API URL (optional - defaults to Railway)
+# Configure API URL
 cp .env.example .env
 nano .env  # Set VITE_API_URL to your backend URL
 
@@ -220,58 +221,55 @@ Stores accuracy deltas calculated by tracking the same train across successive p
 
 ## Deployment
 
-### AWS App Runner (Recommended)
+Everything runs on AWS:
 
-App Runner is the simplest AWS option for this app — it handles containers, scaling, and HTTPS automatically.
+| Component | Service |
+|-----------|---------|
+| Luas backend | AWS App Runner (via `apprunner.yaml`) |
+| DART service | AWS App Runner (via `apprunner-dart.yaml`) |
+| Frontend | AWS Amplify (via `amplify.yml`) |
+| Database | Amazon RDS PostgreSQL |
 
-1. **Create a PostgreSQL database** (e.g. Amazon RDS, or a free tier on [Neon](https://neon.tech) / [Supabase](https://supabase.com))
-2. Go to the [App Runner console](https://console.aws.amazon.com/apprunner)
-3. Click **Create service**
-4. Choose **Source code repository** and connect your GitHub repo
-5. Under **Deployment settings**, select **Automatic** (deploys on every push)
-6. Under **Configure build**:
-   - Runtime: **Docker**
-   - The Dockerfile in this repo will be used automatically
-7. Under **Service settings**:
-   - Port: `8080`
-8. Under **Environment variables**, add:
-   - `DATABASE_URL` = your PostgreSQL connection string (e.g. `postgresql://user:pass@host:5432/dbname`)
-9. Click **Create & deploy**
+### Amazon RDS
 
-The health check endpoint at `/health` can be used for App Runner's health check configuration.
+Create **two databases** in your RDS instance — one for each service:
+
+```sql
+CREATE DATABASE luas_tracker;
+CREATE DATABASE dart_tracker;
+```
+
+Connection strings will be:
+- `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/luas_tracker`
+- `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/dart_tracker`
+
+### AWS App Runner — Luas Backend
+
+1. Go to the [App Runner console](https://console.aws.amazon.com/apprunner) and click **Create service**
+2. Choose **Source code repository**, connect your GitHub repo
+3. Set the **Configuration file** to `apprunner.yaml`
+4. Under **Environment variables**, add:
+   - `DATABASE_URL` = `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/luas_tracker`
+5. Click **Create & deploy**
+
+Use `/health` as the health check path.
+
+### AWS App Runner — DART Service
+
+Same steps as above, but set the **Configuration file** to `apprunner-dart.yaml` and add:
+- `DART_DATABASE_URL` = `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/dart_tracker`
 
 ### AWS Amplify (Frontend)
 
 1. Go to the [Amplify console](https://console.aws.amazon.com/amplify)
 2. Click **Create new app** and connect your GitHub repo
 3. Set the **App root** to `frontend`
-4. Build settings (Amplify should auto-detect Vite):
+4. Build settings (Amplify auto-detects Vite):
    - Build command: `npm run build`
    - Output directory: `dist`
 5. Under **Environment variables**, add:
-   - `VITE_API_URL` = your App Runner backend URL (e.g. `https://abc123.eu-west-1.awsapprunner.com`)
+   - `VITE_API_URL` = your Luas App Runner URL (e.g. `https://abc123.eu-west-1.awsapprunner.com`)
 6. Deploy
-
-### Railway
-
-1. Connect your GitHub repo to Railway
-2. Add a PostgreSQL database service
-3. Set `DATABASE_URL` environment variable (Railway does this automatically when you link the database)
-4. Deploy
-
-### Render
-
-1. Create a new Web Service
-2. Point to your repo
-3. Set environment variables
-4. Deploy
-
-### Docker (any platform)
-
-```bash
-docker build -t luas-tracker .
-docker run -p 8080:8080 -e DATABASE_URL=postgresql://user:pass@host:5432/dbname luas-tracker
-```
 
 ## Next Steps / Future Features
 
