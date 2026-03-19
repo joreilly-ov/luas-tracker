@@ -10,7 +10,7 @@ interface LiveArrivalsProps {
   line: 'green' | 'red';
 }
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://luas-tracker-production.up.railway.app';
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 
 // Valid stop codes are 3 lowercase letters (e.g., 'cab', 'tal', 'bri')
 const VALID_STOP_CODE_PATTERN = /^[a-z]{3}$/i;

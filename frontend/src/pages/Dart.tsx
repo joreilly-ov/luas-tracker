@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const DART_API_URL = import.meta.env.VITE_API_URL || "https://luas-tracker-production.up.railway.app";
+const DART_API_URL = import.meta.env.VITE_API_URL || "";
 
 // The two stations the user cares about most
 const STATIONS_TO_SHOW = [

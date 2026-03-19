@@ -77,7 +77,7 @@ interface BackendHealth {
 // Only show debug panel in development mode
 const isDevelopment = import.meta.env.DEV;
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://luas-tracker-production.up.railway.app';
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 
 // The 12 major stops we track accuracy data for (to respect API rate limits)
 const TRACKED_STOPS = new Set([
