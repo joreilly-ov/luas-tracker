@@ -125,14 +125,26 @@ function avgDelay(arrivals: DartArrival[]): number | null {
   return arrivals.reduce((s, a) => s + a.minutes_late, 0) / arrivals.length;
 }
 
-function StationCard({ stationCode, stationName }: { stationCode: string; stationName: string }) {
-  const { data, loading, error, isRefreshing, lastFetched, refresh } = useStationArrivals(stationCode);
+type StationHookResult = ReturnType<typeof useStationArrivals>;
+
+function StationCard({
+  stationName,
+  hookData,
+  networkServiceRunning,
+}: {
+  stationName: string;
+  hookData: StationHookResult;
+  networkServiceRunning: boolean;
+}) {
+  const { data, loading, error, isRefreshing, lastFetched, refresh } = hookData;
 
   const northbound = data?.next_arrivals.filter(a => a.direction === "Northbound") ?? [];
   const southbound = data?.next_arrivals.filter(a => a.direction === "Southbound") ?? [];
 
   const noTrains = !loading && !error && data && data.next_arrivals.length === 0;
-  const possibleDisruption = noTrains && !data!.has_any_service && isDartOperatingHours();
+  // Use network-wide service status: if any displayed station has trains, DART is running.
+  // This prevents false disruption warnings when one station has a gap in the schedule.
+  const possibleDisruption = noTrains && !networkServiceRunning && isDartOperatingHours();
   const delay = data ? avgDelay(data.next_arrivals) : null;
   const significantDelay = delay !== null && delay >= 5;
 
@@ -280,6 +292,18 @@ function StationCard({ stationCode, stationName }: { stationCode: string; statio
 }
 
 const Dart = () => {
+  // Fetch each station at the parent level so we can compute network-wide service status.
+  // Rules of hooks: called unconditionally in the same order every render.
+  const hookResults = [
+    useStationArrivals(STATIONS_TO_SHOW[0].code),
+    useStationArrivals(STATIONS_TO_SHOW[1].code),
+  ];
+
+  // DART is considered running if ANY of the displayed stations has trains.
+  // This prevents Clontarf Road from showing "Possible service disruption"
+  // during a normal schedule gap while Blackrock (same line) has trains.
+  const networkServiceRunning = hookResults.some(h => h.data?.has_any_service === true);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -329,8 +353,13 @@ const Dart = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {STATIONS_TO_SHOW.map(s => (
-            <StationCard key={s.code} stationCode={s.code} stationName={s.name} />
+          {STATIONS_TO_SHOW.map((s, idx) => (
+            <StationCard
+              key={s.code}
+              stationName={s.name}
+              hookData={hookResults[idx]}
+              networkServiceRunning={networkServiceRunning}
+            />
           ))}
         </div>
       </main>
