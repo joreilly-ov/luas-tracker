@@ -1,0 +1,24 @@
+# DART service — fly deploy from dart-service/ directory
+# Set your app name: fly apps create luas-tracker-dart (or whatever name you choose)
+app = "luas-tracker-dart"
+primary_region = "dub"
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep always-on — APScheduler must not be interrupted
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

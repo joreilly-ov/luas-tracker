@@ -2,13 +2,7 @@ venv/
 __pycache__/
 *.pyc
 .env
-.git/
-.gitignore
-*.md
-pytest.ini
+*.db
 .pytest_cache/
 htmlcov/
-*.db
-dart-service/
-frontend/
 fly.toml
