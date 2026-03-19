@@ -1,15 +1,43 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Train, RefreshCw, AlertCircle, Loader, MapPin, Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const DART_API_URL = import.meta.env.VITE_API_URL || "";
+const STORAGE_KEY = "dart-selected-station";
+const DEFAULT_STATION = "BROCK";
 
-// The two stations the user cares about most
-const STATIONS_TO_SHOW = [
-  { code: "CNTRF", name: "Clontarf Road" },
-  { code: "BROCK", name: "Blackrock" },
+// All DART stations in geographic order, south → north
+const ALL_STATIONS = [
+  { code: "GRYST",  name: "Greystones" },
+  { code: "SNKLL",  name: "Shankill" },
+  { code: "KLNY",   name: "Killiney" },
+  { code: "DLKEY",  name: "Dalkey" },
+  { code: "SDCVE",  name: "Sandycove & Glasthule" },
+  { code: "GLNGY",  name: "Glenageary" },
+  { code: "DLGRE",  name: "Dún Laoghaire" },
+  { code: "SLTH",   name: "Salthill & Monkstown" },
+  { code: "SEAPT",  name: "Seapoint" },
+  { code: "BROCK",  name: "Blackrock" },
+  { code: "BTSTN",  name: "Booterstown" },
+  { code: "SYDPRD", name: "Sydney Parade" },
+  { code: "SDMNT",  name: "Sandymount" },
+  { code: "LNDN",   name: "Lansdowne Road" },
+  { code: "GCDK",   name: "Grand Canal Dock" },
+  { code: "PERSE",  name: "Pearse" },
+  { code: "TARA",   name: "Tara Street" },
+  { code: "CNLLY",  name: "Connolly" },
+  { code: "CNTRF",  name: "Clontarf Road" },
+  { code: "KILBK",  name: "Kilbarrack" },
+  { code: "RAHNY",  name: "Raheny" },
+  { code: "HRMST",  name: "Harmonstown" },
+  { code: "BYSDE",  name: "Bayside" },
+  { code: "HWTHJ",  name: "Howth Junction & Donaghmede" },
+  { code: "SUTT",   name: "Sutton" },
+  { code: "HWTH",   name: "Howth" },
+  { code: "PMRCK",  name: "Portmarnock" },
+  { code: "MHIDE",  name: "Malahide" },
 ];
 
 interface DartArrival {
@@ -57,8 +85,13 @@ function useStationArrivals(stationCode: string) {
     }
   }, [stationCode]);
 
-  useEffect(() => { fetch_(); }, [fetch_]);
-  // Poll every 60s — matches the dart-service polling interval
+  useEffect(() => {
+    setData(null);
+    setLoading(true);
+    setError(null);
+    fetch_();
+  }, [fetch_]);
+
   useEffect(() => {
     const interval = setInterval(fetch_, 60_000);
     return () => clearInterval(interval);
@@ -112,39 +145,25 @@ function ArrivalRow({ arrival }: { arrival: DartArrival }) {
   );
 }
 
-// Returns true if the current local time is within rough DART operating hours (06:00–23:30).
 function isDartOperatingHours(): boolean {
   const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
   return mins >= 360 && mins <= 1410; // 06:00 – 23:30
 }
 
-// Average delay across all arrivals; returns null if no data.
 function avgDelay(arrivals: DartArrival[]): number | null {
   if (arrivals.length === 0) return null;
   return arrivals.reduce((s, a) => s + a.minutes_late, 0) / arrivals.length;
 }
 
-type StationHookResult = ReturnType<typeof useStationArrivals>;
-
-function StationCard({
-  stationName,
-  hookData,
-  networkServiceRunning,
-}: {
-  stationName: string;
-  hookData: StationHookResult;
-  networkServiceRunning: boolean;
-}) {
+function StationCard({ hookData }: { hookData: ReturnType<typeof useStationArrivals> }) {
   const { data, loading, error, isRefreshing, lastFetched, refresh } = hookData;
 
   const northbound = data?.next_arrivals.filter(a => a.direction === "Northbound") ?? [];
   const southbound = data?.next_arrivals.filter(a => a.direction === "Southbound") ?? [];
 
   const noTrains = !loading && !error && data && data.next_arrivals.length === 0;
-  // Use network-wide service status: if any displayed station has trains, DART is running.
-  // This prevents false disruption warnings when one station has a gap in the schedule.
-  const possibleDisruption = noTrains && !networkServiceRunning && isDartOperatingHours();
+  const possibleDisruption = noTrains && !data?.has_any_service && isDartOperatingHours();
   const delay = data ? avgDelay(data.next_arrivals) : null;
   const significantDelay = delay !== null && delay >= 5;
 
@@ -153,34 +172,32 @@ function StationCard({
 
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
-      {/* Card header — DART teal */}
       <div className="px-4 py-3 bg-teal-600">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MapPin className="h-5 w-5 text-white" />
-            <div>
-              <h2 className="text-lg font-bold text-white">{stationName}</h2>
-              <span className="text-xs text-white/80">DART Line</span>
-            </div>
+            <span className="text-xs text-white/80 font-medium uppercase tracking-wide">DART Line</span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refresh}
-            disabled={isRefreshing}
-            className="text-white hover:bg-white/20 hover:text-white"
-          >
-            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {lastFetched && (
+              <span className="text-xs text-white/70">
+                Updated {formatTime(lastFetched)}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              disabled={isRefreshing}
+              className="text-white hover:bg-white/20 hover:text-white h-8 w-8 p-0"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="p-4">
-        {lastFetched && (
-          <p className="text-xs text-muted-foreground mb-3">Updated: {formatTime(lastFetched)}</p>
-        )}
-
-        {/* Disruption warning — no trains at all from Irish Rail during operating hours */}
         {possibleDisruption && (
           <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 flex gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -201,7 +218,6 @@ function StationCard({
           </div>
         )}
 
-        {/* Significant delay warning */}
         {significantDelay && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 flex gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -221,7 +237,7 @@ function StationCard({
         )}
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
             <Loader className="h-6 w-6 animate-spin text-teal-600" />
             <p className="text-sm text-muted-foreground">Loading arrivals...</p>
           </div>
@@ -233,9 +249,6 @@ function StationCard({
             <div>
               <h3 className="font-semibold text-destructive text-sm">Unable to load</h3>
               <p className="text-xs text-destructive/80 mt-1">{error}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                API: {DART_API_URL}
-              </p>
               <Button variant="destructive" size="sm" onClick={refresh} className="mt-2 h-7 text-xs">
                 Retry
               </Button>
@@ -244,8 +257,7 @@ function StationCard({
         )}
 
         {!loading && !error && data && data.next_arrivals.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Southbound */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center gap-2 mb-2 pb-2 border-b-2 border-teal-600">
                 <ArrowLeft className="h-3.5 w-3.5 text-teal-600" />
@@ -253,13 +265,12 @@ function StationCard({
                 <span className="text-xs text-muted-foreground">({southbound.length})</span>
               </div>
               {southbound.length > 0 ? (
-                southbound.slice(0, 4).map((a, i) => <ArrivalRow key={i} arrival={a} />)
+                southbound.slice(0, 5).map((a, i) => <ArrivalRow key={i} arrival={a} />)
               ) : (
                 <p className="text-sm text-muted-foreground py-3 text-center">No trains</p>
               )}
             </div>
 
-            {/* Northbound */}
             <div>
               <div className="flex items-center gap-2 mb-2 pb-2 border-b-2 border-teal-600">
                 <ArrowRight className="h-3.5 w-3.5 text-teal-600" />
@@ -267,7 +278,7 @@ function StationCard({
                 <span className="text-xs text-muted-foreground">({northbound.length})</span>
               </div>
               {northbound.length > 0 ? (
-                northbound.slice(0, 4).map((a, i) => <ArrivalRow key={i} arrival={a} />)
+                northbound.slice(0, 5).map((a, i) => <ArrivalRow key={i} arrival={a} />)
               ) : (
                 <p className="text-sm text-muted-foreground py-3 text-center">No trains</p>
               )}
@@ -276,7 +287,7 @@ function StationCard({
         )}
 
         {!loading && !error && data && data.next_arrivals.length === 0 && !possibleDisruption && (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-10 text-center">
             <Train className="h-6 w-6 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No DART trains scheduled</p>
             <p className="text-xs text-muted-foreground/70 mt-1">Outside operating hours or end of service</p>
@@ -292,21 +303,21 @@ function StationCard({
 }
 
 const Dart = () => {
-  // Fetch each station at the parent level so we can compute network-wide service status.
-  // Rules of hooks: called unconditionally in the same order every render.
-  const hookResults = [
-    useStationArrivals(STATIONS_TO_SHOW[0].code),
-    useStationArrivals(STATIONS_TO_SHOW[1].code),
-  ];
+  const [selectedCode, setSelectedCode] = useState<string>(
+    () => localStorage.getItem(STORAGE_KEY) ?? DEFAULT_STATION
+  );
 
-  // DART is considered running if ANY of the displayed stations has trains.
-  // This prevents Clontarf Road from showing "Possible service disruption"
-  // during a normal schedule gap while Blackrock (same line) has trains.
-  const networkServiceRunning = hookResults.some(h => h.data?.has_any_service === true);
+  const hookData = useStationArrivals(selectedCode);
+
+  const handleChange = (code: string) => {
+    setSelectedCode(code);
+    localStorage.setItem(STORAGE_KEY, code);
+  };
+
+  const selectedName = ALL_STATIONS.find(s => s.code === selectedCode)?.name ?? selectedCode;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="bg-teal-700 text-white">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -336,41 +347,56 @@ const Dart = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Beta notice */}
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
           <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
             <span className="font-semibold">Beta — </span>
-            Live DART data is sourced from the{" "}
-            <span className="font-medium">Irish Rail real-time API</span>. Arrivals are polled every 60 seconds.
+            Live data from the <span className="font-medium">Irish Rail real-time API</span>, polled every 60s.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
-          <div className="h-1 w-8 bg-teal-600 rounded-full" />
-          <h2 className="text-lg font-semibold text-foreground">Live Arrivals</h2>
+        {/* Station picker */}
+        <div className="mb-6">
+          <label htmlFor="station-select" className="block text-sm font-semibold text-foreground mb-2">
+            Station
+          </label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-600 pointer-events-none" />
+            <select
+              id="station-select"
+              value={selectedCode}
+              onChange={e => handleChange(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-border bg-card pl-9 pr-10 py-2.5 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+            >
+              {ALL_STATIONS.map(s => (
+                <option key={s.code} value={s.code}>{s.name}</option>
+              ))}
+            </select>
+            {/* Chevron */}
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {STATIONS_TO_SHOW.map((s, idx) => (
-            <StationCard
-              key={s.code}
-              stationName={s.name}
-              hookData={hookResults[idx]}
-              networkServiceRunning={networkServiceRunning}
-            />
-          ))}
+        {/* Station name heading */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-1 w-8 bg-teal-600 rounded-full" />
+          <h2 className="text-lg font-semibold text-foreground">{selectedName}</h2>
         </div>
+
+        <StationCard hookData={hookData} />
       </main>
 
       <footer className="border-t border-border mt-auto py-6 bg-muted/30">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>DART Real-Time Information</p>
-          <p className="text-xs mt-1 opacity-70">
-            Powered by{" "}
-            <span className="underline">Irish Rail Real-Time API</span>
-          </p>
+          <p className="text-xs mt-1 opacity-70">Powered by Irish Rail Real-Time API</p>
         </div>
       </footer>
     </div>
