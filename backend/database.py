@@ -11,7 +11,7 @@ load_dotenv()
 # For production, change to: postgresql+psycopg://user:password@localhost/luas_tracker
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./luas_tracker.db")
 
-# Railway provides DATABASE_URL as postgres:// but SQLAlchemy 1.4+ requires postgresql://
+# Some providers supply DATABASE_URL as postgres:// but SQLAlchemy 1.4+ requires postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

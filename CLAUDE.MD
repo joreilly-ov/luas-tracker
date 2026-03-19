@@ -17,7 +17,7 @@ A full-stack learning project that tracks real-time arrivals for Dublin's Luas t
 
 - **Backend (Luas)**: Python 3.9+ with FastAPI
 - **Backend (DART)**: Python 3.9+ with FastAPI — standalone microservice
-- **Database**: PostgreSQL (production) / SQLite (development) — separate DBs for each service
+- **Database**: PostgreSQL on Amazon RDS (production) / SQLite (development) — separate DBs for each service
 - **ORM**: SQLAlchemy 2.0
 - **Scheduling**: APScheduler (background jobs)
 - **HTTP Client**: httpx (async)
@@ -47,7 +47,8 @@ luas-tracker/
 │   ├── scheduler.py         # DART background jobs (polling every 60s, accuracy every 2m)
 │   └── requirements.txt     # Python dependencies
 ├── frontend/                # React frontend (deployed to AWS Amplify)
-├── Dockerfile               # Backend container build (used by App Runner)
+├── apprunner.yaml           # App Runner config for Luas backend
+├── apprunner-dart.yaml      # App Runner config for DART service
 ├── .dockerignore            # Docker build exclusions
 ├── CLAUDE.MD                # Project guide for AI assistance
 └── README.md                # User-facing documentation
@@ -416,12 +417,14 @@ uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
 **Luas backend:**
 ```bash
-DATABASE_URL=sqlite:///./luas_tracker.db  # or postgresql://...
+DATABASE_URL=sqlite:///./luas_tracker.db  # local dev
+DATABASE_URL=postgresql://user:pass@your-instance.rds.amazonaws.com:5432/luas_tracker  # production
 ```
 
 **DART service:**
 ```bash
-DART_DATABASE_URL=sqlite:///./dart_tracker.db  # or postgresql://...
+DART_DATABASE_URL=sqlite:///./dart_tracker.db  # local dev
+DART_DATABASE_URL=postgresql://user:pass@your-instance.rds.amazonaws.com:5432/dart_tracker  # production
 ```
 
 Both services auto-convert `postgres://` to `postgresql://` for compatibility. The two services use completely separate databases and never share state.
@@ -481,7 +484,7 @@ See `TESTING.md` for detailed testing documentation.
 
 ### DART
 
-6. **DART service not containerised separately**: The `dart-service/` doesn't yet have its own Dockerfile or App Runner config. It runs as a standalone process; deployment requires manual setup.
+6. **DART accuracy at low-frequency times**: Off-peak DART trains run every 20-30 minutes, so accuracy data volume will be lower than during peak hours.
 
 7. **Irish Rail API availability**: The Irish Rail API is generally reliable but occasionally returns empty or malformed responses. The DART client logs and skips bad responses gracefully.
 
@@ -562,7 +565,8 @@ rm dart_tracker.db && python -c "from database import init_db; init_db()"
 | `dart-service/routes.py` | DART endpoints (arrivals, stations, accuracy, debug) |
 | `dart-service/dart_client.py` | Irish Rail API client, XML parsing, DART filtering |
 | `dart-service/scheduler.py` | DART background jobs (polling every 60s, accuracy every 2m) |
-| `Dockerfile` | Container build for Luas backend (used by AWS App Runner) |
+| `apprunner.yaml` | App Runner config for Luas backend (managed Python 3.11 runtime) |
+| `apprunner-dart.yaml` | App Runner config for DART service (managed Python 3.11 runtime) |
 
 ## Learning Notes
 
