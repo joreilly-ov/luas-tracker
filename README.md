@@ -25,11 +25,13 @@ This is a learning project that tracks Luas and DART arrivals across Dublin. It 
 
 ```
 luas-tracker/
-├── backend/              # Python FastAPI backend (deployed to AWS App Runner)
-├── dart-service/         # Standalone DART microservice (deployed to AWS App Runner)
-├── frontend/             # Frontend app (deployed to AWS Amplify)
-├── apprunner.yaml        # App Runner config for Luas backend
-├── apprunner-dart.yaml   # App Runner config for DART service
+├── backend/              # Python FastAPI backend (Luas service)
+├── dart-service/         # Standalone DART microservice
+│   ├── Dockerfile        # Container build for Fly.io
+│   └── fly.toml          # Fly.io config for DART service
+├── frontend/             # React frontend (Cloudflare Pages)
+├── Dockerfile            # Container build for Luas backend (Fly.io)
+├── fly.toml              # Fly.io config for Luas backend
 └── README.md
 ```
 
@@ -221,55 +223,64 @@ Stores accuracy deltas calculated by tracking the same train across successive p
 
 ## Deployment
 
-Everything runs on AWS:
+| Component | Service | Cost |
+|-----------|---------|------|
+| Luas backend | Fly.io (shared VM, Dublin region) | Free |
+| DART service | Fly.io (shared VM, Dublin region) | Free |
+| Frontend | Cloudflare Pages | Free |
+| Database | Neon (serverless Postgres) | Free |
 
-| Component | Service |
-|-----------|---------|
-| Luas backend | AWS App Runner (via `apprunner.yaml`) |
-| DART service | AWS App Runner (via `apprunner-dart.yaml`) |
-| Frontend | AWS Amplify (via `amplify.yml`) |
-| Database | Amazon RDS PostgreSQL |
+### 1. Database — Neon
 
-### Amazon RDS
+1. Sign up at [neon.tech](https://neon.tech) (free, no card required)
+2. Create a project — pick the **AWS eu-west-1** region (closest to Dublin)
+3. Create two databases in the Neon console:
+   - `luas_tracker`
+   - `dart_tracker`
+4. Copy the connection strings — they look like:
+   - `postgresql://user:pass@ep-xxx.eu-west-1.aws.neon.tech/luas_tracker?sslmode=require`
+   - `postgresql://user:pass@ep-xxx.eu-west-1.aws.neon.tech/dart_tracker?sslmode=require`
 
-Create **two databases** in your RDS instance — one for each service:
+### 2. Compute — Fly.io
 
-```sql
-CREATE DATABASE luas_tracker;
-CREATE DATABASE dart_tracker;
+Install the CLI: `brew install flyctl` (or see [fly.io/docs/hands-on/install-flyctl](https://fly.io/docs/hands-on/install-flyctl/))
+
+```bash
+fly auth signup   # or fly auth login
 ```
 
-Connection strings will be:
-- `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/luas_tracker`
-- `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/dart_tracker`
+**Deploy the Luas backend** (from repo root):
 
-### AWS App Runner — Luas Backend
+```bash
+fly apps create luas-tracker          # pick any unique name
+fly secrets set DATABASE_URL="postgresql://..." -a luas-tracker
+fly deploy
+```
 
-1. Go to the [App Runner console](https://console.aws.amazon.com/apprunner) and click **Create service**
-2. Choose **Source code repository**, connect your GitHub repo
-3. Set the **Configuration file** to `apprunner.yaml`
+**Deploy the DART service** (from dart-service/ directory):
+
+```bash
+cd dart-service
+fly apps create luas-tracker-dart     # pick any unique name
+fly secrets set DART_DATABASE_URL="postgresql://..." -a luas-tracker-dart
+fly deploy
+```
+
+Update the `app` name in each `fly.toml` to match what you created above.
+
+Both services run in Dublin (`dub` region) and are kept always-on (`auto_stop_machines = false`) so the APScheduler background jobs keep running.
+
+### 3. Frontend — Cloudflare Pages
+
+1. Push your repo to GitHub
+2. Go to [Cloudflare Pages](https://pages.cloudflare.com) → **Create a project** → connect your GitHub repo
+3. Configure the build:
+   - **Root directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Output directory**: `dist`
 4. Under **Environment variables**, add:
-   - `DATABASE_URL` = `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/luas_tracker`
-5. Click **Create & deploy**
-
-Use `/health` as the health check path.
-
-### AWS App Runner — DART Service
-
-Same steps as above, but set the **Configuration file** to `apprunner-dart.yaml` and add:
-- `DART_DATABASE_URL` = `postgresql://user:pass@your-instance.rds.amazonaws.com:5432/dart_tracker`
-
-### AWS Amplify (Frontend)
-
-1. Go to the [Amplify console](https://console.aws.amazon.com/amplify)
-2. Click **Create new app** and connect your GitHub repo
-3. Set the **App root** to `frontend`
-4. Build settings (Amplify auto-detects Vite):
-   - Build command: `npm run build`
-   - Output directory: `dist`
-5. Under **Environment variables**, add:
-   - `VITE_API_URL` = your Luas App Runner URL (e.g. `https://abc123.eu-west-1.awsapprunner.com`)
-6. Deploy
+   - `VITE_API_URL` = your Fly.io Luas backend URL (e.g. `https://luas-tracker.fly.dev`)
+5. Deploy
 
 ## Next Steps / Future Features
 
