@@ -577,8 +577,21 @@ class TestDartArrivalsProxy:
 
     @patch("routes.httpx.AsyncClient")
     def test_has_any_service_false_on_empty_response(self, mock_cls, client):
+        # Both the primary station and the CNLLY fallback return empty XML
         mock_cls.return_value = _mock_ir_client(_EMPTY_IR_XML)
         assert client.get("/dart/arrivals/BROCK").json()["has_any_service"] is False
+
+    @patch("routes.httpx.AsyncClient")
+    def test_has_any_service_true_when_fallback_station_has_trains(self, mock_cls, client):
+        # Primary station (BROCK) empty → triggers fallback check against CNLLY
+        # CNLLY has trains → has_any_service elevated to True
+        mock_cls.side_effect = [
+            _mock_ir_client(_EMPTY_IR_XML),   # BROCK call: no trains
+            _mock_ir_client(_SAMPLE_IR_XML),  # CNLLY fallback: has trains
+        ]
+        data = client.get("/dart/arrivals/BROCK").json()
+        assert data["has_any_service"] is True
+        assert data["total_dart_trains"] == 0   # BROCK still shows no trains
 
     @patch("routes.httpx.AsyncClient")
     def test_arrivals_sorted_by_due_in_minutes(self, mock_cls, client):
