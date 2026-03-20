@@ -28,6 +28,18 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Luas */}
+          <Link to="/">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            >
+              <Train className="h-4 w-4" />
+              <span className="hidden sm:inline">Luas</span>
+            </Button>
+          </Link>
+
           {/* DART */}
           <Link to="/dart">
             <div className="relative">
