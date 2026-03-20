@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Target, BarChart3, Loader, AlertCircle, RefreshCw, MapPin, Bug, ChevronDown, ChevronUp, Database, Activity, Server } from 'lucide-react';
+import { TrendingUp, Target, BarChart3, Loader, AlertCircle, RefreshCw, MapPin, Bug, ChevronDown, ChevronUp, Database, Activity, Server, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficialLineForStopName } from '@/lib/luasStopLines';
