@@ -9,6 +9,7 @@ import Metrics from "./pages/Metrics";
 import Tetris from "./pages/Tetris";
 import Dart from "./pages/Dart";
 import NotFound from "./pages/NotFound";
+import { AppHeader } from "./components/AppHeader";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AppHeader />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/hours" element={<OperatingHours />} />
