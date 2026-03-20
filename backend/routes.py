@@ -845,12 +845,22 @@ def _parse_irish_rail_xml(xml_content: str, station_code: str) -> tuple[list, bo
     return arrivals, total_trains > 0
 
 
+# City-centre station used to verify network health when a quieter station
+# shows no trains.  Connolly is served by every DART on both branches.
+_NETWORK_CHECK_STATION = "CNLLY"
+
+
 @router.get("/dart/arrivals/{station_code}")
 async def dart_arrivals(station_code: str, limit: int = 6):
     """
     Live DART arrivals proxy — fetches directly from the Irish Rail real-time API
     and returns only DART services (filters out Intercity / Commuter).
     No database is used; this is a pure passthrough.
+
+    has_any_service is True if either the requested station or (when it shows
+    no trains) the Connolly hub station has trains in the 90-minute window.
+    This prevents false disruption warnings at quieter stations that simply
+    have a gap in their schedule.
     """
     station_code = station_code.upper()
     if station_code not in DART_STATIONS:
@@ -871,6 +881,25 @@ async def dart_arrivals(station_code: str, limit: int = 6):
 
     arrivals, has_any_service = _parse_irish_rail_xml(response.text, station_code)
     arrivals.sort(key=lambda a: a["due_in_minutes"])
+
+    # If this station shows no trains, cross-check a busy city-centre station
+    # before concluding there is a network outage.  A station like Clontarf Road
+    # can legitimately have no trains in any given 90-minute window even when
+    # DART is running normally.
+    if not has_any_service and station_code != _NETWORK_CHECK_STATION:
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as check_client:
+                check_resp = await check_client.get(
+                    _IRISH_RAIL_URL,
+                    params={"StationCode": _NETWORK_CHECK_STATION, "NumMins": 90}
+                )
+                check_resp.raise_for_status()
+                _, network_active = _parse_irish_rail_xml(check_resp.text, _NETWORK_CHECK_STATION)
+                if network_active:
+                    has_any_service = True
+        except Exception as e:
+            # Fallback check failed — keep has_any_service as False (conservative)
+            logger.warning(f"Network health check against {_NETWORK_CHECK_STATION} failed: {e}")
 
     return {
         "station_code": station_code,
