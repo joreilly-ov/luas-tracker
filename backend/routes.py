@@ -130,6 +130,16 @@ async def get_stops():
     }
 
 
+@router.get("/arrivals/cabra", response_model=CurrentArrivalsResponse)
+async def get_cabra_arrivals(db: Session = Depends(get_db), limit: int = 3):
+    """
+    Get the next N upcoming trams for Cabra stop.
+    Returns the most recent forecast for each unique destination/direction combo.
+    (Kept for backwards compatibility)
+    """
+    return await get_arrivals("cab", db, limit)
+
+
 @router.get("/arrivals/{stop_code}", response_model=CurrentArrivalsResponse)
 async def get_arrivals(stop_code: str, db: Session = Depends(get_db), limit: int = 3):
     """
@@ -197,16 +207,6 @@ async def get_arrivals(stop_code: str, db: Session = Depends(get_db), limit: int
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/arrivals/cabra", response_model=CurrentArrivalsResponse)
-async def get_cabra_arrivals(db: Session = Depends(get_db), limit: int = 3):
-    """
-    Get the next N upcoming trams for Cabra stop.
-    Returns the most recent forecast for each unique destination/direction combo.
-    (Kept for backwards compatibility)
-    """
-    return await get_arrivals("cab", db, limit)
 
 
 @router.get("/accuracy/summary")
