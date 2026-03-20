@@ -5,7 +5,7 @@ Tests cover: XML parsing, API endpoints, database models, and edge cases
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 import xml.etree.ElementTree as ET
 
 # Import modules to test
@@ -377,6 +377,95 @@ class TestDataIntegrity:
             # Should be parseable as ISO datetime
             due_time = datetime.fromisoformat(tram["due_time"])
             assert isinstance(due_time, datetime)
+
+
+class TestFetchLuasForecast:
+    """Tests for the async HTTP client (fetch_luas_forecast)."""
+
+    async def test_success_returns_parsed_forecasts(self):
+        xml = """<stopInfo>
+            <direction name="Inbound">
+                <tram dueMins="5" destination="Broombridge" />
+            </direction>
+        </stopInfo>"""
+        with patch("luas_client.httpx.AsyncClient") as mock_cls:
+            mock_response = MagicMock()
+            mock_response.text = xml
+            mock_response.raise_for_status = MagicMock()
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_cls.return_value = mock_http
+
+            result = await fetch_luas_forecast("cab")
+
+        assert len(result) == 1
+        assert result[0]["destination"] == "Broombridge"
+        assert result[0]["direction"] == "Inbound"
+        assert result[0]["due_minutes"] == 5
+
+    async def test_http_error_raises_luas_api_error(self):
+        import httpx
+        from luas_client import LuasAPIError
+
+        with patch("luas_client.httpx.AsyncClient") as mock_cls:
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(side_effect=httpx.HTTPError("Connection failed"))
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_cls.return_value = mock_http
+
+            with pytest.raises(LuasAPIError):
+                await fetch_luas_forecast("cab")
+
+    async def test_unexpected_error_raises_luas_api_error(self):
+        from luas_client import LuasAPIError
+
+        with patch("luas_client.httpx.AsyncClient") as mock_cls:
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(side_effect=RuntimeError("Unexpected"))
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_cls.return_value = mock_http
+
+            with pytest.raises(LuasAPIError):
+                await fetch_luas_forecast("cab")
+
+    async def test_passes_correct_stop_code_in_params(self):
+        xml = "<stopInfo></stopInfo>"
+        with patch("luas_client.httpx.AsyncClient") as mock_cls:
+            mock_response = MagicMock()
+            mock_response.text = xml
+            mock_response.raise_for_status = MagicMock()
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_cls.return_value = mock_http
+
+            await fetch_luas_forecast("tal")
+
+            call_kwargs = mock_http.get.call_args
+            assert call_kwargs[1]["params"]["stop"] == "tal"
+            assert call_kwargs[1]["params"]["action"] == "forecast"
+
+    async def test_default_stop_code_is_cab(self):
+        xml = "<stopInfo></stopInfo>"
+        with patch("luas_client.httpx.AsyncClient") as mock_cls:
+            mock_response = MagicMock()
+            mock_response.text = xml
+            mock_response.raise_for_status = MagicMock()
+            mock_http = MagicMock()
+            mock_http.get = AsyncMock(return_value=mock_response)
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_cls.return_value = mock_http
+
+            await fetch_luas_forecast()
+
+            call_kwargs = mock_http.get.call_args
+            assert call_kwargs[1]["params"]["stop"] == "cab"
 
 
 if __name__ == "__main__":
