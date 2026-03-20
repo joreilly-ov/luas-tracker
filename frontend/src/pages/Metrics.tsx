@@ -229,18 +229,18 @@ export default function Metrics() {
         ];
         
         setStops(allStops);
-        // Set default to The Point if available, otherwise first stop
-        const thePoint = allStops.find(s => s.code === 'tpt');
-        setSelectedStop(thePoint ? 'tpt' : allStops[0]?.code || '');
+        // Keep 'cab' as default if it exists, otherwise first stop
+        const cabra = allStops.find(s => s.code === 'cab');
+        setSelectedStop(prev => prev || (cabra ? 'cab' : allStops[0]?.code || ''));
       } catch (err) {
         console.error('Failed to fetch stops:', err);
         // Fallback to hardcoded stops
         const fallbackStops = [
-          { code: 'tpt', name: 'The Point', line: 'Red Line' },
+          { code: 'cab', name: 'Cabra', line: 'Green Line' },
           { code: 'tal', name: 'Tallaght', line: 'Red Line' },
         ];
         setStops(fallbackStops);
-        setSelectedStop('tpt');
+        setSelectedStop('cab');
       } finally {
         setStopsLoading(false);
       }
