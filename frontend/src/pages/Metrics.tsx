@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Train, Clock, TrendingUp, Target, BarChart3, Loader, AlertCircle, RefreshCw, ArrowLeft, MapPin, Bug, ChevronDown, ChevronUp, Database, Activity, Server } from 'lucide-react';
+import { TrendingUp, Target, BarChart3, Loader, AlertCircle, RefreshCw, MapPin, Bug, ChevronDown, ChevronUp, Database, Activity, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficialLineForStopName } from '@/lib/luasStopLines';
@@ -331,50 +330,6 @@ export default function Metrics() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary-foreground/10 rounded-lg p-2">
-              <BarChart3 className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Accuracy Metrics</h1>
-              <p className="text-xs opacity-80">{currentStop?.name ?? 'Loading stop…'} - All Time</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            {lastUpdated && (
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] opacity-60 uppercase tracking-wide">Updated</p>
-                <p className="text-xs font-medium">{formatLastUpdated(lastUpdated)}</p>
-              </div>
-            )}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={fetchMetrics}
-              disabled={isRefreshing || stopsLoading || !selectedStop}
-              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-            </Button>
-            <Link to="/">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
-            </Link>
-          </div>
-        </div>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
         {/* Stop Selector */}
         <div className="mb-6">
@@ -415,6 +370,21 @@ export default function Metrics() {
                   )}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchMetrics}
+                disabled={isRefreshing || stopsLoading || !selectedStop}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              </Button>
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  Updated {formatLastUpdated(lastUpdated)}
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               Our metric system only tracks 12 "major stops" out of 67 total stops on the Luas network. This is to abide by API rate limiting [and Lovable credit cost!!].

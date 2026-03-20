@@ -1,6 +1,4 @@
-import { Train, Clock, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ScheduleItem {
@@ -81,24 +79,6 @@ const scheduleData: ScheduleItem[] = [
 const OperatingHours = () => {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="icon" className="mr-2 text-primary-foreground hover:bg-primary-foreground/10">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="bg-primary-foreground/10 rounded-lg p-2">
-            <Clock className="h-7 w-7" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Operating Hours</h1>
-            <p className="text-xs opacity-80">First & last tram times</p>
-          </div>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8">
         {/* Green Line Section */}
         <section className="mb-8">

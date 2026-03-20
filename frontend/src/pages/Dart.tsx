@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { Train, RefreshCw, AlertCircle, Loader, MapPin, Clock, ArrowLeft, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -318,35 +317,6 @@ const Dart = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-teal-700 text-white">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/10 rounded-lg p-2">
-              <Train className="h-7 w-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold">DART Tracker</h1>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded">
-                  Beta
-                </span>
-              </div>
-              <p className="text-xs opacity-80 hidden sm:block">Irish Rail Real-Time Data</p>
-            </div>
-          </div>
-          <Link to="/">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 border-white/30 text-white hover:bg-white/10 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Luas</span>
-            </Button>
-          </Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Beta notice */}
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
