@@ -6,7 +6,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import logging
 import httpx
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from database import get_db, LuasSnapshot, LuasAccuracy
 
@@ -206,7 +206,8 @@ async def get_arrivals(stop_code: str, db: Session = Depends(get_db), limit: int
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching arrivals for {stop_code}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/accuracy/summary")
@@ -307,7 +308,7 @@ async def get_accuracy_summary(db: Session = Depends(get_db), stop_code: str = "
 
     except Exception as e:
         logger.error(f"Error in accuracy/summary: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/accuracy/calculate")
@@ -393,8 +394,8 @@ async def calculate_accuracy(db: Session = Depends(get_db)):
     
     except Exception as e:
         db.rollback()
-        logger.error(f"Error calculating accuracy: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error calculating accuracy: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/debug/accuracy/by-stop")
@@ -757,8 +758,8 @@ async def get_accuracy_metrics(db: Session = Depends(get_db), stop_code: str = "
         }
     
     except Exception as e:
-        logger.error(f"Error getting accuracy metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting accuracy metrics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ---------------------------------------------------------------------------
