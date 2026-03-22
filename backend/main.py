@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from pathlib import Path
 import logging
+import os
 
 from database import init_db
 from routes import router
@@ -35,12 +36,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for frontend
+# CORS is only needed during local development — in production the React
+# frontend is served from the same origin as the API, so no CORS applies.
+# Set ALLOWED_ORIGINS to a comma-separated list of permitted origins.
+# allow_credentials is intentionally omitted: this API uses no cookies or
+# auth headers, and browsers reject the * + credentials combination anyway.
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5173")
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=_allowed_origins,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
