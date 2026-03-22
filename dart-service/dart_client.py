@@ -1,5 +1,5 @@
 import httpx
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from datetime import datetime, timedelta
 import logging
 from typing import List, Dict
