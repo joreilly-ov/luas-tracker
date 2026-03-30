@@ -3,6 +3,12 @@ import defusedxml.ElementTree as ET
 from datetime import datetime, timedelta
 import logging
 from typing import List, Dict
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,15 +17,33 @@ IRISH_RAIL_API_URL = "https://api.irishrail.ie/realtime/realtime.asmx/getStation
 # XML namespace used by the Irish Rail API in all response documents
 IRISHRAIL_NS = "http://api.irishrail.ie/realtime/"
 
+# Retry configuration: max 3 attempts with exponential backoff (1s, 2s, 4s)
+_RETRY_ATTEMPTS = 3
+_RETRY_MULTIPLIER = 1  # Base delay in seconds
+_RETRY_MAX_WAIT = 8    # Max wait time between retries
+
 
 class DartAPIError(Exception):
     """Raised when the Irish Rail API call fails or returns unexpected data."""
     pass
 
 
+@retry(
+    stop=stop_after_attempt(_RETRY_ATTEMPTS),
+    wait=wait_exponential(multiplier=_RETRY_MULTIPLIER, max=_RETRY_MAX_WAIT),
+    retry=retry_if_exception_type((
+        httpx.ConnectError,
+        httpx.TimeoutException,
+        httpx.NetworkError,
+    )),
+    reraise=True,
+)
 async def fetch_dart_arrivals(station_code: str) -> List[Dict]:
     """
     Fetch real-time DART arrivals for a given station from the Irish Rail API.
+
+    Automatically retries up to 3 times with exponential backoff (1s, 2s, 4s max)
+    on temporary network errors. Does not retry on 4xx client errors.
 
     Filters out all non-DART services (Intercity, Commuter, etc.) so only
     DART trains are returned.
@@ -42,11 +66,33 @@ async def fetch_dart_arrivals(station_code: str) -> List[Dict]:
                 params={"StationCode": station_code}
             )
             response.raise_for_status()
+            
+            logger.debug(f"Successfully fetched DART arrivals for station {station_code}")
             return parse_dart_xml(response.text, station_code)
-
+    
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as e:
+        # These will trigger retries automatically
+        logger.warning(f"Temporary error fetching DART for {station_code} (will retry): {type(e).__name__}: {e}")
+        raise
+    
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            # Server error - will retry
+            logger.warning(f"Server error fetching DART for {station_code} ({e.response.status_code}, will retry): {e}")
+            raise
+        else:
+            # Client error - don't retry
+            logger.error(f"Client error fetching DART for {station_code} ({e.response.status_code}): {e}")
+            raise DartAPIError(f"Failed to fetch Irish Rail API for {station_code}: {e}")
+    
     except httpx.HTTPError as e:
         logger.error(f"HTTP error fetching DART data for {station_code}: {e}")
         raise DartAPIError(f"Failed to fetch Irish Rail API for {station_code}: {e}")
+    
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error fetching DART data for {station_code}: {e}")
+        raise DartAPIError(f"Failed to fetch Irish Rail API for {station_code}: {e}")
+    
     except Exception as e:
         logger.error(f"Unexpected error fetching DART data for {station_code}: {e}")
         raise DartAPIError(f"Unexpected error: {e}")

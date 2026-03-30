@@ -3,11 +3,23 @@ import defusedxml.ElementTree as ET
 from datetime import datetime, timedelta
 import logging
 from typing import List, Dict, Optional
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    retry_if_result,
+)
 
 logger = logging.getLogger(__name__)
 
 LUAS_API_URL = "https://luasforecasts.rpa.ie/xml/get.ashx"
 CABRA_STOP_CODE = "cab"
+
+# Retry configuration: max 3 attempts with exponential backoff (1s, 2s, 4s)
+_RETRY_ATTEMPTS = 3
+_RETRY_MULTIPLIER = 1  # Base delay in seconds
+_RETRY_MAX_WAIT = 8    # Max wait time between retries
 
 
 class LuasAPIError(Exception):
@@ -15,9 +27,45 @@ class LuasAPIError(Exception):
     pass
 
 
+def _should_retry_exception(exception: Exception) -> bool:
+    """
+    Determine if we should retry based on exception type.
+    
+    Retry on:
+    - Connection errors (network issues)
+    - Timeout errors
+    - 5xx server errors
+    
+    Don't retry on:
+    - 4xx client errors (invalid request, not found, etc.)
+    """
+    if isinstance(exception, httpx.HTTPStatusError):
+        # Don't retry 4xx errors (client's fault)
+        return exception.response.status_code >= 500
+    
+    # Retry on connection/timeout errors
+    return isinstance(
+        exception,
+        (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError),
+    )
+
+
+@retry(
+    stop=stop_after_attempt(_RETRY_ATTEMPTS),
+    wait=wait_exponential(multiplier=_RETRY_MULTIPLIER, max=_RETRY_MAX_WAIT),
+    retry=retry_if_exception_type((
+        httpx.ConnectError,
+        httpx.TimeoutException,
+        httpx.NetworkError,
+    )),
+    reraise=True,
+)
 async def fetch_luas_forecast(stop_code: str = CABRA_STOP_CODE) -> List[Dict]:
     """
     Fetch real-time Luas forecasts for a given stop.
+    
+    Automatically retries up to 3 times with exponential backoff (1s, 2s, 4s max)
+    on temporary network errors. Does not retry on 4xx client errors.
     
     Returns a list of dicts with:
     - destination: Final destination
@@ -40,11 +88,28 @@ async def fetch_luas_forecast(stop_code: str = CABRA_STOP_CODE) -> List[Dict]:
             )
             response.raise_for_status()
             
+            logger.debug(f"Successfully fetched Luas forecast for stop {stop_code}")
             return parse_luas_xml(response.text)
+    
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as e:
+        # These will trigger retries automatically
+        logger.warning(f"Temporary error fetching Luas for {stop_code} (will retry): {type(e).__name__}: {e}")
+        raise
+    
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            # Server error - will retry
+            logger.warning(f"Server error fetching Luas for {stop_code} ({e.response.status_code}, will retry): {e}")
+            raise
+        else:
+            # Client error - don't retry
+            logger.error(f"Client error fetching Luas for {stop_code} ({e.response.status_code}): {e}")
+            raise LuasAPIError(f"Failed to fetch Luas API: {e}")
     
     except httpx.HTTPError as e:
         logger.error(f"HTTP error fetching Luas data: {e}")
         raise LuasAPIError(f"Failed to fetch Luas API: {e}")
+    
     except Exception as e:
         logger.error(f"Unexpected error fetching Luas data: {e}")
         raise LuasAPIError(f"Unexpected error: {e}")
