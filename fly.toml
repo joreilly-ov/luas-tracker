@@ -1,20 +1,30 @@
-# fly.toml app configuration file generated for luas-tracker on 2026-03-19T11:59:28Z
-#
+# fly.toml app configuration file for luas-tracker
+# Luas backend + React frontend
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
+# IMPORTANT: APScheduler polling jobs run continuously, so:
+# - auto_stop_machines = false (keep machine warm for polling)
+# - min_machines_running = 1 (always have at least one instance)
+# - primary_region = 'dub' (Dublin, closest to users)
 
 app = 'luas-tracker'
-primary_region = 'iad'
+primary_region = 'dub'
 
 [build]
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  # Keep always-on — APScheduler must not be interrupted
+  auto_stop_machines = false
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
 
 [[vm]]
   memory = '1gb'
