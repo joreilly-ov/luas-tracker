@@ -36,13 +36,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS is only needed during local development — in production the React
-# frontend is served from the same origin as the API, so no CORS applies.
-# Set ALLOWED_ORIGINS to a comma-separated list of permitted origins.
-# allow_credentials is intentionally omitted: this API uses no cookies or
-# auth headers, and browsers reject the * + credentials combination anyway.
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5173")
-_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+# This API is public, read-only, and uses no credentials/auth.
+# allow_origins=["*"] is safe here — the browser restriction on
+# * + allow_credentials doesn't apply since we don't set allow_credentials.
+# To restrict to specific origins, set ALLOWED_ORIGINS env var as a
+# comma-separated list (e.g. "https://myapp.fly.dev,http://localhost:5173").
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+if _raw_origins.strip() == "*":
+    _allowed_origins = ["*"]
+else:
+    _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
