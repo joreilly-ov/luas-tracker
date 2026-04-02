@@ -287,3 +287,22 @@ Both services run in Dublin (`dub` region) and are kept always-on (`auto_stop_ma
 - [APScheduler](https://apscheduler.readthedocs.io/)
 - [Dublin Open Data - Luas API](https://data.gov.ie)
 - [Irish Rail Real-Time API](https://api.irishrail.ie/realtime/)
+
+## Generate User Documentation From Code
+
+Generate documentation directly from executable code, OpenAPI output, frontend routes, and test runs:
+
+```powershell
+./scripts/generate-user-docs.ps1
+```
+
+This writes:
+
+- `docs/USER_GUIDE.generated.md`
+- `docs/generated/luas-openapi.json`
+- `docs/generated/dart-openapi.json`
+- `docs/generated/backend-tests.txt`
+- `docs/generated/dart-service-tests.txt`
+- `docs/generated/frontend-tests.txt`
+
+If any test suite fails, the script exits non-zero and the generated user guide records the failure status.

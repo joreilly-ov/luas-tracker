@@ -1,0 +1,292 @@
+﻿{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Generated API",
+    "version": "generated"
+  },
+  "paths": {
+    "/stations": {
+      "get": {
+        "summary": "Get Stations",
+        "description": "Return all DART stations grouped by zone (south / city / north).",
+        "operationId": "get_stations_stations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrivals/{station_code}": {
+      "get": {
+        "summary": "Get Arrivals",
+        "description": "Return the next DART arrivals at a station from the most recent poll.\n\nParameters:\n- station_code: Irish Rail station code (e.g. BROCK, CNTRF, CNLLY)\n- limit: Number of arrivals to return (default 5)",
+        "operationId": "get_arrivals_arrivals__station_code__get",
+        "parameters": [
+          {
+            "name": "station_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Station Code"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationArrivalsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accuracy/summary": {
+      "get": {
+        "summary": "Get Accuracy Summary",
+        "description": "Forecast accuracy metrics for a station.\n\nParameters:\n- station_code: Station code (default BROCK for Blackrock)\n- hours: Hours to look back (omit for all-time data)",
+        "operationId": "get_accuracy_summary_accuracy_summary_get",
+        "parameters": [
+          {
+            "name": "station_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "BROCK",
+              "title": "Station Code"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/data-collection": {
+      "get": {
+        "summary": "Debug Data Collection",
+        "description": "Check whether background polling is active and writing data.",
+        "operationId": "debug_data_collection_debug_data_collection_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArrivalResponse": {
+        "properties": {
+          "train_code": {
+            "type": "string",
+            "title": "Train Code"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "due_in_minutes": {
+            "type": "integer",
+            "title": "Due In Minutes"
+          },
+          "minutes_late": {
+            "type": "integer",
+            "title": "Minutes Late"
+          },
+          "expected_arrival": {
+            "type": "string",
+            "title": "Expected Arrival"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_location": {
+            "type": "string",
+            "title": "Last Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "train_code",
+          "origin",
+          "destination",
+          "direction",
+          "due_in_minutes",
+          "minutes_late",
+          "expected_arrival",
+          "status",
+          "last_location"
+        ],
+        "title": "ArrivalResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "StationArrivalsResponse": {
+        "properties": {
+          "station_code": {
+            "type": "string",
+            "title": "Station Code"
+          },
+          "station_name": {
+            "type": "string",
+            "title": "Station Name"
+          },
+          "last_updated": {
+            "type": "string",
+            "title": "Last Updated"
+          },
+          "next_arrivals": {
+            "items": {
+              "$ref": "#/components/schemas/ArrivalResponse"
+            },
+            "type": "array",
+            "title": "Next Arrivals"
+          },
+          "total_dart_trains": {
+            "type": "integer",
+            "title": "Total Dart Trains"
+          },
+          "has_any_service": {
+            "type": "boolean",
+            "title": "Has Any Service"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_code",
+          "station_name",
+          "last_updated",
+          "next_arrivals",
+          "total_dart_trains",
+          "has_any_service"
+        ],
+        "title": "StationArrivalsResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
