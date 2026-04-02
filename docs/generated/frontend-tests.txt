@@ -1,0 +1,17 @@
+﻿
+> vite_react_shadcn_ts@0.0.0 test
+> vitest run
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/joreilly/joe-luas/luas-tracker/frontend[39m
+
+[90mstderr[2m | src/test/app-routes.test.tsx[2m > [22m[2mApp routes[2m > [22m[2mrenders 404 page for unknown route
+[22m[39m404 Error: User attempted to access non-existent route: /not-a-real-route
+System.Management.Automation.RemoteException
+ [32mÔ£ô[39m src/test/app-routes.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[90m 155[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m   Start at [22m 15:18:05
+[2m   Duration [22m 3.33s[2m (transform 298ms, setup 250ms, collect 1.19s, tests 155ms, environment 704ms, prepare 568ms)[22m
+

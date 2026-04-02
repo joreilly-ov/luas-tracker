@@ -1,0 +1,541 @@
+﻿{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Generated API",
+    "version": "generated"
+  },
+  "paths": {
+    "/stops": {
+      "get": {
+        "summary": "Get Stops",
+        "description": "Get list of all available Luas stops.\nReturns stops organized by line with their codes in route order.",
+        "operationId": "get_stops_stops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrivals/cabra": {
+      "get": {
+        "summary": "Get Cabra Arrivals",
+        "description": "Get the next N upcoming trams for Cabra stop.\nReturns the most recent forecast for each unique destination/direction combo.\n(Kept for backwards compatibility)",
+        "operationId": "get_cabra_arrivals_arrivals_cabra_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentArrivalsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/arrivals/{stop_code}": {
+      "get": {
+        "summary": "Get Arrivals",
+        "description": "Get the next N upcoming trams for a given stop.\nReturns the most recent forecast for each unique destination/direction combo.\n\nParameters:\n- stop_code: Luas stop code (e.g., 'cab' for Cabra, 'tal' for Tallaght)\n- limit: Number of arrivals to return (default 3)",
+        "operationId": "get_arrivals_arrivals__stop_code__get",
+        "parameters": [
+          {
+            "name": "stop_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Stop Code"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentArrivalsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accuracy/summary": {
+      "get": {
+        "summary": "Get Accuracy Summary",
+        "description": "Get forecast accuracy metrics for a specific stop.\nParameters:\n- stop_code: Stop code (e.g., bro, cab, sts, tal, jer, con, etc. - see /stops for full list)\n- hours: Number of hours to look back (omit or leave blank for all-time data)",
+        "operationId": "get_accuracy_summary_accuracy_summary_get",
+        "parameters": [
+          {
+            "name": "stop_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "cab",
+              "title": "Stop Code"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accuracy/calculate": {
+      "post": {
+        "summary": "Calculate Accuracy",
+        "description": "Calculate forecast accuracy by comparing forecasts across polls.\n\nAlgorithm:\n1. For each unique tram (destination + direction)\n2. Look at forecasts from previous polls\n3. When a tram \"arrives\" (forecast_arrival_minutes approaches 0)\n4. Compare original forecast to actual time taken\n5. Store accuracy delta\n\nThis runs periodically to populate LuasAccuracy table.",
+        "operationId": "calculate_accuracy_accuracy_calculate_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/accuracy/by-stop": {
+      "get": {
+        "summary": "Debug Accuracy By Stop",
+        "description": "Debug endpoint to see accuracy records by stop",
+        "operationId": "debug_accuracy_by_stop_debug_accuracy_by_stop_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/accuracy/count": {
+      "get": {
+        "summary": "Debug Accuracy Count",
+        "description": "Debug endpoint to see how many accuracy records exist",
+        "operationId": "debug_accuracy_count_debug_accuracy_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/accuracy/stops-summary": {
+      "get": {
+        "summary": "Debug Accuracy Stops Summary",
+        "description": "Quick summary of which stops have accuracy data",
+        "operationId": "debug_accuracy_stops_summary_debug_accuracy_stops_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/snapshots/transitions": {
+      "get": {
+        "summary": "Debug Snapshot Transitions",
+        "description": "Debug endpoint to see forecast transitions for a specific stop.\nShows how forecasts change over time to diagnose why accuracy isn't being calculated.",
+        "operationId": "debug_snapshot_transitions_debug_snapshots_transitions_get",
+        "parameters": [
+          {
+            "name": "stop_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "cab",
+              "title": "Stop Code"
+            }
+          },
+          {
+            "name": "minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Minutes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/data-collection": {
+      "get": {
+        "summary": "Debug Data Collection",
+        "description": "Debug endpoint to check if data collection (polling) is working.\nReturns status of the background polling job.",
+        "operationId": "debug_data_collection_debug_data_collection_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/database": {
+      "get": {
+        "summary": "Debug Database",
+        "description": "Debug endpoint to check database connectivity and health.\nVerifies the database is accessible and data is being written.",
+        "operationId": "debug_database_debug_database_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics/accuracy": {
+      "get": {
+        "summary": "Get Accuracy Metrics",
+        "description": "Get accuracy metrics for a specific stop over a time period.\n\nReturns:\n- Overall accuracy\n- By destination\n- By direction\n- Trend over time",
+        "operationId": "get_accuracy_metrics_metrics_accuracy_get",
+        "parameters": [
+          {
+            "name": "stop_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "cab",
+              "title": "Stop Code"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 24,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dart/arrivals/{station_code}": {
+      "get": {
+        "summary": "Dart Arrivals",
+        "description": "Live DART arrivals proxy \u2014 fetches directly from the Irish Rail real-time API\nand returns only DART services (filters out Intercity / Commuter).\nNo database is used; this is a pure passthrough.\n\nhas_any_service is True if either the requested station or (when it shows\nno trains) the Connolly hub station has trains in the 90-minute window.\nThis prevents false disruption warnings at quieter stations that simply\nhave a gap in their schedule.",
+        "operationId": "dart_arrivals_dart_arrivals__station_code__get",
+        "parameters": [
+          {
+            "name": "station_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Station Code"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 6,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dart/stations": {
+      "get": {
+        "summary": "Dart Stations",
+        "description": "Return the list of all DART stations.",
+        "operationId": "dart_stations_dart_stations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CurrentArrivalsResponse": {
+        "properties": {
+          "stop_code": {
+            "type": "string",
+            "title": "Stop Code"
+          },
+          "last_updated": {
+            "type": "string",
+            "title": "Last Updated"
+          },
+          "next_arrivals": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastResponse"
+            },
+            "type": "array",
+            "title": "Next Arrivals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stop_code",
+          "last_updated",
+          "next_arrivals"
+        ],
+        "title": "CurrentArrivalsResponse"
+      },
+      "ForecastResponse": {
+        "properties": {
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "due_minutes": {
+            "type": "integer",
+            "title": "Due Minutes"
+          },
+          "due_time": {
+            "type": "string",
+            "title": "Due Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "destination",
+          "direction",
+          "due_minutes",
+          "due_time"
+        ],
+        "title": "ForecastResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

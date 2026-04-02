@@ -1,0 +1,39 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-7.4.3, pluggy-1.6.0
+rootdir: C:\Users\joreilly\joe-luas\luas-tracker\backend
+configfile: pytest.ini
+testpaths: .
+plugins: anyio-4.13.0, asyncio-0.21.1, cov-4.1.0
+asyncio: mode=Mode.AUTO
+collected 100 items / 2 errors
+
+=================================== ERRORS ====================================
+____________________ ERROR collecting test_luas_tracker.py ____________________
+ImportError while importing test module 'C:\Users\joreilly\joe-luas\luas-tracker\backend\test_luas_tracker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_luas_tracker.py:12: in <module>
+    from luas_client import parse_luas_xml, fetch_luas_forecast
+luas_client.py:6: in <module>
+    from tenacity import (
+E   ModuleNotFoundError: No module named 'tenacity'
+_____________________ ERROR collecting test_scheduler.py ______________________
+ImportError while importing test module 'C:\Users\joreilly\joe-luas\luas-tracker\backend\test_scheduler.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_scheduler.py:20: in <module>
+    from scheduler import calculate_accuracy_from_snapshots, poll_luas_and_store
+scheduler.py:7: in <module>
+    from luas_client import fetch_luas_forecast, LuasAPIError
+luas_client.py:6: in <module>
+    from tenacity import (
+E   ModuleNotFoundError: No module named 'tenacity'
+=========================== short test summary info ===========================
+ERROR test_luas_tracker.py
+ERROR test_scheduler.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
+====================== 3695 warnings, 2 errors in 0.94s =======================

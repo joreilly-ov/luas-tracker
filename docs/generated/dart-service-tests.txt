@@ -1,0 +1,25 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-7.4.3, pluggy-1.6.0
+rootdir: C:\Users\joreilly\joe-luas\luas-tracker\dart-service
+configfile: pytest.ini
+testpaths: .
+plugins: anyio-4.13.0, asyncio-0.21.1, cov-4.1.0
+asyncio: mode=Mode.AUTO
+collected 1 item / 1 error
+
+=================================== ERRORS ====================================
+____________________ ERROR collecting test_dart_service.py ____________________
+ImportError while importing test module 'C:\Users\joreilly\joe-luas\luas-tracker\dart-service\test_dart_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+test_dart_service.py:21: in <module>
+    from dart_client import parse_dart_xml, _tag, _get_text, fetch_dart_arrivals, DartAPIError
+dart_client.py:6: in <module>
+    from tenacity import (
+E   ModuleNotFoundError: No module named 'tenacity'
+=========================== short test summary info ===========================
+ERROR test_dart_service.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+======================== 33 warnings, 1 error in 0.83s ========================
